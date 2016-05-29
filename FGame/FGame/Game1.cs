@@ -70,6 +70,7 @@ namespace FGame
          * Add chunked-world
          * Normal onKeyPress (done)
          * Tree world generating algorithm
+         * Add abstraction to GamePole and Chunk!
          */
 
         Vector2 ScreenCenter {
@@ -218,7 +219,7 @@ namespace FGame
             if (KeyPress(Keys.E))
                 foreach (var chest in gamePole.Chests)
                 {
-                    Rectangle chestRect = new Rectangle(chest.Position.X * chestWidth, chest.Position.Y * chestHeight, chestWidth, chestHeight);
+                    Rectangle chestRect = new Rectangle(chest.GlobPosition.X * chestWidth, chest.GlobPosition.Y * chestHeight, chestWidth, chestHeight);
                     if (chestRect.Intersects(playerRect) && !chest.IsOpen)
                     {
                         chest.OpenStart(player);
@@ -308,9 +309,15 @@ namespace FGame
             {
                 cheatSpeedHack = !cheatSpeedHack;
                 if (cheatSpeedHack)
-                    playerMoveSpeed *= 4;
+                    playerMoveSpeed *= 3;
                 else
-                    playerMoveSpeed /= 4;
+                    playerMoveSpeed /= 3;
+            }
+
+            if (enableDevCheats && KeyPress(Keys.B))
+            {
+                MouseState s = Mouse.GetState();
+                player.Position += new Vector2(s.X, s.Y) - ScreenCenter;
             }
 
             base.Update(gameTime);
@@ -319,9 +326,10 @@ namespace FGame
         private Point[] GetCollidingTiles(Rectangle rect)
         {
             //TODO: optimize!~
+            //TODO: Negative coord bug
             List<Point> result = new List<Point>();
-            for (int x = 0; x < gamePole.PoleWidth; x++)
-                for (int y = 0; y < gamePole.PoleHeight; y++)
+            for (int x = gamePole.MinX; x < gamePole.MaxX; x++)
+                for (int y = gamePole.MinY; y < gamePole.MaxY; y++)
                 {
                     Rectangle r = new Rectangle(x * tileWidth, y * tileHeight, tileWidth, tileHeight);
                     if (r.Intersects(rect))
@@ -352,14 +360,14 @@ namespace FGame
             Rectangle pr = new Rectangle((int)newPos.X + 4, (int)newPos.Y + 4, playerTextureWidth - 8, playerTextureHeight - 4);
             bool canMove = true;
             foreach (var coll in GetCollidingTiles(pr))
-                canMove &= !gamePole.Tiles[coll.X, coll.Y].IsObstacle;
+                canMove &= !gamePole.GetTileAt(new Point(coll.X, coll.Y)).IsObstacle;
             if (canMove)
                 player.Position = newPos;
         }
 
         private void RegenPole()
         {
-            gamePole = GamePole.Generate(64, 64, 30, 30, rnd, this);
+            gamePole = GamePole.Generate(/*64, 64, 30, 30,*/ rnd, this);
             Point p = gamePole.GetRandomFreePole(rnd);
             player.Position = new Vector2(p.X * playerTextureWidth, p.Y * playerTextureHeight);
         }
@@ -403,7 +411,7 @@ namespace FGame
                     Rectangle pr = new Rectangle((int)newPos.X + 4, (int)newPos.Y + 4, 32 - 8, 32 - 8);
                     bool canMove = true;
                     foreach (var coll in GetCollidingTiles(pr))
-                        canMove &= !gamePole.Tiles[coll.X, coll.Y].IsObstacle;
+                        canMove &= !gamePole.GetTileAt(new Point(coll.X, coll.Y)).IsObstacle;
                     if (canMove)
                     {
                         fireball.X = (int)newPos.X;
@@ -474,8 +482,10 @@ namespace FGame
             DrawBuffs(player);
             if (debugInfo)
             {
+                Vector2 chnkIdIrr = ((player.Position / new Vector2(tileWidth, tileHeight) + new Vector2(gamePole.MinX, gamePole.MinY)) / new Vector2(Chunk.width, Chunk.height));
                 string dbgnfo = "Pos: " + (player.Position).ToString()
-                    + "\nIsRunningSlowly: " + gameTime.IsRunningSlowly;
+                    + "\nIsRunningSlowly: " + gameTime.IsRunningSlowly
+                    + "\n Chunk: " + new Vector2((int)chnkIdIrr.X, (int)chnkIdIrr.Y);
                 string[] lines = dbgnfo.Split('\n');
                 for (int i = 0; i < lines.Length; i++)
                 {
@@ -548,8 +558,8 @@ namespace FGame
         {
             foreach (var chest in gamePole.Chests)
             {
-                Vector2 pos = ScreenCenter - player.Position + new Vector2(chest.Position.X * chestWidth, chest.Position.Y * chestHeight - 16);
-                Point center = new Point(chest.Position.X * chestWidth + chestWidth / 2, chest.Position.Y * chestHeight + chestHeight / 2 - 16);
+                Vector2 pos = ScreenCenter - player.Position + new Vector2(chest.GlobPosition.X * chestWidth, chest.GlobPosition.Y * chestHeight - 16);
+                Point center = new Point(chest.GlobPosition.X * chestWidth + chestWidth / 2, chest.GlobPosition.Y * chestHeight + chestHeight / 2 - 16);
                 float lightness = GetLightLevel(center, lightSources);
                 spriteBatch.Draw(chestTexture, pos, new Rectangle(chest.Type * chestWidth, (chest.AnimationFrame) * (chestHeight + 16), chestWidth, chestHeight + 16), Color.White * lightness);
             }
@@ -594,17 +604,18 @@ namespace FGame
 
         private void DrawTiles(LightSource[] lightSources)
         {
-            for (int x = 0; x < gamePole.Tiles.GetLength(0); x++)
-                for (int y = 0; y < gamePole.Tiles.GetLength(1); y++)
+            for (int x = gamePole.MinX; x < gamePole.MaxX; x++)
+                for (int y = gamePole.MinY; y < gamePole.MaxY; y++)
                 {
                     Vector2 pps = (new Vector2(x, y) * tileWidth - player.Position) / 2;
-                    if (gamePole.Tiles[x, y].Id != 0 && pps.X < screenWidth && pps.Y < screenHeight)
+                    Tile t = gamePole.GetTileAt(new Point(x, y));
+                    if (t != null && t.Id != 0 && pps.X < screenWidth && pps.Y < screenHeight)
                     {
                         Point center = new Point(x * tileWidth + tileWidth / 2, y * tileHeight + tileHeight / 2);
                         float lightness = GetLightLevel(center, lightSources);
-                        if (gamePole.Tiles[x, y].IsObstacle)
+                        if (t.IsObstacle)
                             lightness = (lightness * 0.75f);
-                        spriteBatch.Draw(tileTexture, ScreenCenter - player.Position + new Vector2(x * tileWidth, y * tileHeight), GetTilePos(gamePole.Tiles[x, y].Id), Color.White * lightness);
+                        spriteBatch.Draw(tileTexture, ScreenCenter - player.Position + new Vector2(x * tileWidth, y * tileHeight), GetTilePos(t.Id), Color.White * lightness);
                     }
                 }
         }

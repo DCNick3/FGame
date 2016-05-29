@@ -28,5 +28,13 @@ namespace FGame
         public bool IsOpen { get; set; }
         public int AnimationFrame { get; set; }
         public Point Position { get; set; }
+        public Point ChunkPosition { get; set; }
+        public Point GlobPosition
+        {
+            get
+            {
+                return new Point(ChunkPosition.X * Chunk.width + Position.X, ChunkPosition.Y * Chunk.height + Position.Y);
+            }
+        }
     }
 }

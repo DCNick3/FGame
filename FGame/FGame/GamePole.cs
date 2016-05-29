@@ -8,7 +8,7 @@ using System.Text;
 namespace FGame
 {
 
-    class GamePole
+    public class GamePole
     {
         //TODO: split gamePole to chunks!
         private class AStarNode
@@ -38,11 +38,9 @@ namespace FGame
 
             foreach (var point in neighbourPoints)
             {
-                if (point.X < 0 || point.X >= Tiles.GetLength(0))
+                if (GetTileAt(point) == null)
                     continue;
-                if (point.Y < 0 || point.Y >= Tiles.GetLength(1))
-                    continue;
-                if (Tiles[point.X, point.Y].IsObstacle && wallWeight == -1)
+                if (GetTileAt(point).IsObstacle && wallWeight == -1)
                     continue;
 
 
@@ -66,7 +64,7 @@ namespace FGame
 
         private int GetDistanceBetweenNeighbours(Point one, Point two, int nullWeight, int wallWeight)
         {
-            return ((Tiles[one.X, one.Y].IsObstacle) ? wallWeight : nullWeight) + ((Tiles[two.X, two.Y].IsObstacle) ? wallWeight : nullWeight);
+            return ((GetTileAt(new Point(one.X, one.Y)).IsObstacle) ? wallWeight : nullWeight) + ((GetTileAt(new Point(two.X, two.Y)).IsObstacle) ? wallWeight : nullWeight);
         }
 
         private static List<Point> GetPathForNode(AStarNode pathNode)
@@ -158,142 +156,160 @@ namespace FGame
             return null;
         }
 
-        public static GamePole Generate(int poleWidth, int poleHeight, int roomCount, int wallCost, Random rnd, Game1 game)
+        public static GamePole Generate(Random rnd, Game1 game)
         {
-            List<Room> rooms = new List<Room>();
-            GamePole gp = new GamePole(poleWidth, poleHeight, game);
-            int floorType = rnd.Next(35, 39);
-
-            for (int i = 0; i < roomCount; i++)
-            {
-                for (int j = 0; j < 100; j++)
-                {
-                    int w = rnd.Next(2, 10);
-                    int h = rnd.Next(2, 10);
-
-                    Rectangle roomRect = new Rectangle();
-
-                    roomRect.X = rnd.Next(1, poleWidth - w - 1);
-                    roomRect.Y = rnd.Next(1, poleHeight - h - 1);
-                    roomRect.Width = w;
-                    roomRect.Height = h;
-
-                    List<Room> inter = rooms.FindAll(
-                        (Room room_) =>
-                        {
-                            //return ((room.X < room_.X && room.X > room_.X + room_.Width) && (room.X + room.Width < room_.X && room.X + room.Width > room_.X + room_.Width) && (room.Y < room_.Y && room.Y > room_.Y + room_.Height) && (room.Y + room.Height < room_.Y && room.Y + room.Height > room_.Y + room_.Height));
-                            return roomRect.Intersects(room_.Position);
-                        });
-                    if (inter.Count == 0)
-                    {
-                        var room = new Room(roomRect);
-                        rooms.Add(room);
-                        gp.Rooms = rooms.ToArray();
-                        for (int x = 0; x < room.Position.Width; x++)
-                            for (int y = 0; y < room.Position.Height; y++)
-                                gp.Tiles[room.Position.X + x, room.Position.Y + y] = new Tile(floorType, false);
-
-                        //Connect
-                        int cn = 2 + rnd.Next(2);
-                        for (int i_ = 0; i_ < cn; i_++)
-                        {
-                            Room t = gp.GetRndRoom(rnd);
-                            for (int x = 0; x < 10; x++)
-                            {
-                                if (t == room) continue;
-                                t = gp.GetRndRoom(rnd);
-                                break;
-                            }
-                            Point[] pp = gp.AStarGetWay(1, wallCost, room.Center, t.Center);
-                            for (int x = 0; x < pp.Length; x++)
-                            {
-                                gp.Tiles[pp[x].X, pp[x].Y] = new Tile(floorType, false);
-                            }
-                            if (t != room)
-                                room.ConnectsTo.Add(t);
-                        }
-
-                        break;
-                    }
-                }
-            }
-
-            gp.Rooms = rooms.ToArray();
-
-            foreach (var room in gp.Rooms)
-            {
-                if (room.ConnectsTo.Count == 0)
-                {
-                    Room t = gp.GetRndRoom(rnd);
-                    for (int x = 0; x < 10; x++)
-                    {
-                        if (t == room) continue;
-                        t = gp.GetRndRoom(rnd);
-                        break;
-                    }
-                    Point[] pp = gp.AStarGetWay(1, wallCost, room.Center, t.Center);
-                    for (int x = 0; x < pp.Length; x++)
-                    {
-                        gp.Tiles[pp[x].X, pp[x].Y] = new Tile(floorType, false);
-                    }
-                    room.ConnectsTo.Add(t);
-                }
-            }
-
-            for (int i = 0; i < roomCount / 10; i++)
-            {
-                Room room = gp.GetRndRoom(rnd);
-                Room t = gp.GetRndRoom(rnd);
-                Point[] pp = gp.AStarGetWay(1, wallCost, room.Center, t.Center);
-                for (int x = 0; x < pp.Length; x++)
-                {
-                    gp.Tiles[pp[x].X, pp[x].Y] = new Tile(floorType, false);
-                }
-                if (t != room)
-                    room.ConnectsTo.Add(t);
-            }
-
-            //54
-
-            int chestCount = roomCount / 3;
-            List<Chest> chsts = new List<Chest>();
-
-            for (int i = 0; i < chestCount; i++)
-            {
-                for (int j = 0; j < 100; j++)
-                {
-                    Point p = gp.GetRandomFreePole(rnd);
-                    Room r = gp.GetRoomAt(p);
-                    if (r == null || r.Chest != null) continue;
-                    Chest c = new Chest(gp.game);
-                    c.Position = p;
-                    c.Type = rnd.Next(4);
-                    chsts.Add(c);
-                    r.Chest = c;
-                    break;
-                }
-            }
-
-            chsts.Sort((Chest a, Chest b) => a.Position.Y.CompareTo(b.Position.Y));
-            gp.Chests = chsts.ToArray();
-            
-
-            for (int x = 0; x < poleWidth; x++)
-                for (int y = 0; y < poleHeight; y++)
-                    if (gp.Tiles[x, y].IsObstacle && gp.GetNeighbours(new Point(x, y)).Where((Point p) => !gp.Tiles[p.X, p.Y].IsObstacle).Count() != 0)
-                    {
-                        gp.Tiles[x, y].Id = 53;
-                    }
+            GamePole gp = new GamePole(game);
+            gp.chunks = new Chunk[1, 1];
+            gp.chunks[0, 0] = Chunk.Generate(gp, game, rnd);
+            gp.AllocChunk(1, 0, Chunk.Generate(gp, game, rnd));
+            gp.AllocChunk(-1, 0, Chunk.Generate(gp, game, rnd));
+            gp.AllocChunk(0, 1, Chunk.Generate(gp, game, rnd));
+            gp.AllocChunk(0, -1, Chunk.Generate(gp, game, rnd));
+            gp.AllocChunk(-1, 1, Chunk.Generate(gp, game, rnd));
+            gp.AllocChunk(1, -1, Chunk.Generate(gp, game, rnd));
+            gp.AllocChunk(1, 1, Chunk.Generate(gp, game, rnd));
+            gp.AllocChunk(-1, -1, Chunk.Generate(gp, game, rnd));
             return gp;
+        }
+        
+
+        private Chunk[,] chunks;
+
+        public Chest[] Chests
+        {
+            get
+            {
+                List<Chest> chsts = new List<Chest>();
+                for (int x = TileCoordinateOffsetX; x < chunks.GetLength(0) + TileCoordinateOffsetX; x++)
+                    for (int y = TileCoordinateOffsetY; y < chunks.GetLength(1) + TileCoordinateOffsetY; y++)
+                    {
+                        var cnk = chunks[x - TileCoordinateOffsetX, y - TileCoordinateOffsetY];
+                        if (cnk != null)
+                        {
+                            foreach (var c in cnk.Chests)
+                            {
+                                c.ChunkPosition = new Point(x, y);
+                            }
+                            chsts.AddRange(cnk.Chests);
+                        }
+                    }
+                return chsts.ToArray();
+            }
+        }
+        public Room[] Rooms
+        {
+            get
+            {
+                List<Room> rms = new List<Room>();
+                foreach (var cnk in chunks)
+                {
+                    if (cnk != null)
+                    rms.AddRange(cnk.Rooms);
+                }
+                return rms.ToArray();
+            }
+        }
+        /// <summary>
+        /// This is a stub!
+        /// U better to use GetChunkAt(pos)
+        /// </summary>
+        public Tile[,] Tiles
+        {
+            get
+            {
+                Tile[,] res = new Tile[chunks.GetLength(0) * Chunk.width, chunks.GetLength(1) * Chunk.height];
+                for (int x = 0; x < chunks.GetLength(0); x++)
+                    for (int y = 0;y < chunks.GetLength(1); y++)
+                    {
+                        Chunk chunk = chunks[x, y];
+                        if (chunk != null)
+                        for (int xx = 0; xx < chunk.Tiles.GetLength(0); xx++)
+                            for (int yy = 0; yy < chunk.Tiles.GetLength(1); yy++)
+                            {
+                                res[x * Chunk.width + xx, y * Chunk.height + yy] = chunk.Tiles[xx,yy];
+                            }
+                    }
+                return res;
+            }
+        }
+
+        public Tile GetTileAt(Point pos)
+        {
+            int xx = pos.X % Chunk.width;
+            int x = (int)Math.Floor((float)pos.X / Chunk.width);
+            int yy = pos.Y % Chunk.height;
+            int y = (int)Math.Floor((float)pos.Y / Chunk.height);
+            if (xx < 0) xx = Chunk.width + xx;
+            if (yy < 0) yy = Chunk.height + yy;
+            if (x - TileCoordinateOffsetX >= 0 && x - TileCoordinateOffsetX < chunks.GetLength(0) && y - TileCoordinateOffsetY >= 0 && y - TileCoordinateOffsetY < chunks.GetLength(1) && chunks[x - TileCoordinateOffsetX, y - TileCoordinateOffsetY] != null)
+                return chunks[x - TileCoordinateOffsetX, y - TileCoordinateOffsetY].Tiles[xx, yy];
+            else
+                return null;
+        }
+
+        public bool SetTileAt(Point pos, Tile tile)
+        {
+            int xx = pos.X % Chunk.width;
+            int x = (int)Math.Floor((float)pos.X / Chunk.width);
+            int yy = pos.Y % Chunk.height;
+            int y = (int)Math.Floor((float)pos.Y / Chunk.height);
+            if (xx < 0) xx = Chunk.width + xx;
+            if (yy < 0) yy = Chunk.height + yy;
+            if (x - TileCoordinateOffsetX >= 0 && x - TileCoordinateOffsetX < chunks.GetLength(0) && y - TileCoordinateOffsetY >= 0 && y - TileCoordinateOffsetY < chunks.GetLength(1))
+            {
+                chunks[x - TileCoordinateOffsetX, y - TileCoordinateOffsetY].Tiles[xx, yy] = tile;
+                return true;
+            }
+            return false;
         }
 
         //public GameObject[] GameObjects { get; private set; }
-        public Chest[] Chests { get; private set; }
-        public Room[] Rooms { get; private set; }
-        public Tile[,] Tiles { get; private set; }
-        public int PoleWidth { get; private set; }
-        public int PoleHeight { get; private set; }
+
+        public int PoleWidth
+        {
+            get
+            {
+                return chunks.GetLength(0) * Chunk.width;
+            }
+        }
+        public int PoleHeight
+        {
+            get
+            {
+                return chunks.GetLength(1) * Chunk.height;
+            }
+        }
+        public int MinX
+        {
+            get
+            {
+                return TileCoordinateOffsetX * Chunk.width;
+            }
+        }
+        public int MaxX
+        {
+            get
+            {
+                return PoleWidth + TileCoordinateOffsetX * Chunk.width;
+            }
+        }
+        public int MinY
+        {
+            get
+            {
+                return TileCoordinateOffsetY * Chunk.height;
+            }
+        }
+        public int MaxY
+        {
+            get
+            {
+                return PoleHeight + TileCoordinateOffsetY * Chunk.height;
+            }
+        }
         protected Game1 game;
+        public int TileCoordinateOffsetX = 0;
+        public int TileCoordinateOffsetY = 0;
 
         public Point[] GetNeighbours(Point point)
         {
@@ -312,9 +328,7 @@ namespace FGame
 
             foreach (var point_ in points)
             {
-                if (point_.X < 0 || point_.X >= PoleWidth)
-                    continue;
-                if (point_.Y < 0 || point_.Y >= PoleHeight)
+                if (GetTileAt(point_) == null)
                     continue;
 
                 result.Add(point_);
@@ -329,32 +343,197 @@ namespace FGame
             Point res;
             do
             {
-                res = new Point(rnd.Next(0, PoleWidth), rnd.Next(0, PoleHeight));
-                isFree = !Tiles[res.X, res.Y].IsObstacle;
+                res = new Point(rnd.Next(MinX, MaxX), rnd.Next(MinY, MaxY));
+                Tile t = GetTileAt(new Point(res.X, res.Y));
+                isFree = t != null && !t.IsObstacle;
             }
             while (!isFree);
             return res;
         }
 
-        public Room GetRoomAt(Point pos)
-        {
-            return Rooms.Where((Room s) => s.Position.Contains(pos)).FirstOrDefault();
-        }
+        //public Room GetRoomAt(Point pos)
+        //{
+        //    return Rooms.Where((Room s) => s.Position.Contains(pos)).FirstOrDefault();
+        //}
 
-        public Room GetRndRoom(Random rnd)
-        {
-            return Rooms[rnd.Next(Rooms.Length)];
-        }
+        //public Room GetRndRoom(Random rnd)
+        //{
+        //    return Rooms[rnd.Next(Rooms.Length)];
+        //}
 
-        public GamePole(int poleWidth, int poleHeight, Game1 game)
+        public GamePole(Game1 game)
         {
-            this.PoleWidth = poleWidth;
-            this.PoleHeight = poleHeight;
-            Tiles = new Tile[poleWidth, poleHeight];
-            for (int x = 0; x < poleWidth; x++)
-                for (int y = 0; y < poleHeight; y++)
-                    Tiles[x, y] = new Tile(0, true);
             this.game = game;
+        }
+
+        public void AllocChunk(int x, int y, Chunk chunk)
+        {
+            int absX = x - TileCoordinateOffsetX;
+            int absY = y - TileCoordinateOffsetY;
+            if (PoleWidth + TileCoordinateOffsetX < x && TileCoordinateOffsetX <= x && PoleHeight + TileCoordinateOffsetY < x && TileCoordinateOffsetY <= y)
+            {
+                chunks[absX, absY] = chunk;
+            }
+            else
+            {
+                int addX;
+                int addY;
+
+                if (x < 0)
+                {
+                    //Adding to left
+                    if (absX < 0)
+                        addX = absX;
+                    //if (absX >= chunks.GetLength(0))
+                    //    addX = chunks.GetLength(0) - absX;
+                    else
+                        addX = 0;
+                }
+                else
+                {
+                    //Adding to right
+                    if (absX >= chunks.GetLength(0))
+                        addX = chunks.GetLength(0) - absX + 1;
+                    else
+                        addX = 0;
+                }
+
+                if (y < 0)
+                {
+                    //Adding to left
+                    if (absY < 0)
+                        addY = absY;
+                    //if (absY >= chunks.GetLength(1))
+                    //    addY = chunks.GetLength(1) - absY;
+                    else
+                        addY = 0;
+                }
+                else
+                {
+                    //Adding to right
+                    if (absY >= chunks.GetLength(1))
+                        addY = chunks.GetLength(1) - absY + 1;
+                    else
+                        addY = 0;
+                }
+
+                        Chunk[,] newChunks = new Chunk[chunks.GetLength(0) + Math.Abs(addX), chunks.GetLength(1) + Math.Abs(addY)];
+                for (int xx = 0; xx < chunks.GetLength(0); xx++)
+                    for (int yy = 0; yy < chunks.GetLength(1); yy++)
+                    {
+                        newChunks[xx - (addX > 0 ? 0 : addX), yy - (addY > 0 ? 0 : addY)] = chunks[xx, yy];
+                    }
+                newChunks[(addX >= 0) ? addX : (0), (addY >= 0) ? addY : (0)] = chunk;
+                chunks = newChunks;
+                TileCoordinateOffsetX += (addX <= 0) ? addX : (0);
+                TileCoordinateOffsetY += (addY <= 0) ? addY : (0);
+
+                chunks[x - TileCoordinateOffsetX, y - TileCoordinateOffsetY] = chunk;
+
+                List<Point> neibourgs = new List<Point>();
+                neibourgs.Add(new Point(x + 1, y));
+                neibourgs.Add(new Point(x - 1, y));
+                neibourgs.Add(new Point(x, y + 1));
+                neibourgs.Add(new Point(x, y - 1));
+                foreach (var neibourg in neibourgs)
+                {
+                    if (neibourg.X < TileCoordinateOffsetX || neibourg.X >= chunks.GetLength(0) + TileCoordinateOffsetX)
+                        continue;
+                    if (neibourg.Y < TileCoordinateOffsetY || neibourg.Y >= chunks.GetLength(1) + TileCoordinateOffsetY)
+                        continue;
+                    ConnectChunks(x, y, neibourg.X, neibourg.Y);
+                }
+            }
+        }
+        
+        private double GetDistance(Point a, Point b)
+        {
+            return Math.Sqrt(Math.Pow(Math.Abs(a.X - b.X), 2) + Math.Pow(Math.Abs(a.Y - b.Y), 2));
+        }
+
+        private void ConnectChunks(int x1, int y1, int x2, int y2)
+        {
+            if (Math.Abs(x1 - x2) + Math.Abs(y1 - y2) > 1)
+                throw new Exception("Rooms must be neiborgs");
+            Chunk c1 = chunks[x1 - TileCoordinateOffsetX, y1 - TileCoordinateOffsetY];
+            Chunk c2 = chunks[x2 - TileCoordinateOffsetX, y2 - TileCoordinateOffsetY];
+            if (c1 == null || c2 == null)
+                return;
+                //throw new Exception("Chunkc must exists!");
+           
+            Room r1 = null;
+            Room r2 = null;
+            st:
+            if (x1 - x2 > 0)
+            {
+                r1 = c1.Rooms.OrderBy((Room r) => r.Center.X).First();
+                r2 = c2.Rooms.OrderByDescending((Room r) => r.Center.X).First();
+
+            }
+            else if (x1 - x2 < 0)
+            {
+                Chunk cc = c1;
+                c1 = c2;
+                c2 = cc;
+                int t = x1;
+                x1 = x2;
+                x2 = t;
+                t = y1;
+                y1 = y2;
+                y2 = t;//Exchange
+                goto st;
+            }
+            else if (y1 - y2 > 0)
+            {
+                r1 = c1.Rooms.OrderBy((Room r) => r.Center.Y).First();
+                r2 = c2.Rooms.OrderByDescending((Room r) => r.Center.Y).First();
+            }
+            else if (y1 - y2 < 0)
+            {
+                Chunk cc = c1;
+                c1 = c2;
+                c2 = cc;
+                int t = x1;
+                x1 = x2;
+                x2 = x1;
+                t = y1;
+                y1 = y2;
+                y2 = t;//Exchange
+                goto st;
+            }
+            Point gp1 = new Point(r1.Center.X + x1 * Chunk.width, r1.Center.Y + y1 * Chunk.height);
+            Point gp2 = new Point(r2.Center.X + x2 * Chunk.width, r2.Center.Y + y2 * Chunk.height);
+
+            Point[] pp = AStarGetWay(1, 30, gp1, gp2);
+
+
+            foreach (var p in pp)
+            {
+                if (GetTileAt(p).IsObstacle)
+                {
+                    int ft;
+                    if (GetDistance(p, gp1) > GetDistance(p, gp2))
+                    {
+                        ft = GetTileAt(gp2).Id;
+                    }
+                    else
+                    {
+                        ft = GetTileAt(gp1).Id;
+                    }
+                    SetTileAt(p, new Tile(ft, false));
+                }
+            }
+
+            for (int x = MinX; x < MaxX; x++)
+                for (int y = MinY; y < MaxY; y++)
+                {
+                    Tile t = GetTileAt(new Point(x, y));
+                    
+                    if (t != null && t.IsObstacle && GetNeighbours(new Point(x, y)).Where((Point p) => !GetTileAt(p).IsObstacle).Count() != 0)
+                    {
+                        t.Id = 53;
+                    }
+                }
         }
     }
 }

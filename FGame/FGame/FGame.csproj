@@ -74,6 +74,7 @@
   <ItemGroup>
     <Compile Include="Buff.cs" />
     <Compile Include="Chest.cs" />
+    <Compile Include="Chunk.cs" />
     <Compile Include="Fireball.cs" />
     <Compile Include="GameObject.cs" />
     <Compile Include="GamePole.cs" />
