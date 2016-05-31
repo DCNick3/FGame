@@ -19,11 +19,11 @@ namespace FGame
         {
             if (LastedTime.TotalSeconds <= 99)
             {
-                return (int)LastedTime.TotalSeconds + "s";
+                return (int)Math.Ceiling(LastedTime.TotalSeconds) + "s";
             }
             if (LastedTime.TotalMinutes <= 99)
             {
-                return (int)LastedTime.TotalSeconds + "m";
+                return (int)Math.Ceiling(LastedTime.TotalSeconds) + "m";
             }
             return "MANY";
         }

@@ -10,6 +10,7 @@ namespace FGame
         public Player()
         {
             Buffs = new List<Buff>();
+            Inventory = new ItemStack[40];
             HP = 100;
             MaxHP = 100;
             SkillUsePoint = 100;
@@ -31,7 +32,6 @@ namespace FGame
                 return 5f;
             }
         }
-
         public Color BarColor
         {
             get
@@ -39,7 +39,6 @@ namespace FGame
                 return Type == 1 ? Color.Blue : (Type == 0 ? Color.Green : Color.Black);
             }
         }
-
         public int LightStrength
         {
             get
@@ -54,6 +53,30 @@ namespace FGame
                 return ((Buffs.Where((Buff f) => f.Type == BuffType.Torch).Count() > 0 ? 1.5f : 1f));
             }
         }
+        public ItemStack[] Inventory { get; private set; }
+
+        private int hudSlot;
+        private int invSlot;
+
+        public int SelectedSlot
+        {
+            get
+            {
+                if (IsInInventory)
+                    return invSlot;
+                else
+                    return hudSlot;
+            }
+            set
+            {
+                if (IsInInventory)
+                    invSlot = value;
+                else
+                    hudSlot = value;
+            }
+        }
+
+        public bool IsInInventory { get; set; }
 
         public TimeSpan SkillCooldown(int n)
         {
@@ -97,10 +120,27 @@ namespace FGame
                 return false;
         }
 
+        public void ValidateInventory()
+        {
+            for (int i = 0; i < Inventory.Length; i++)
+            {
+                if (Inventory[i] != null && Inventory[i].IsEmpty)
+                    Inventory[i] = null;
+            }
+        }
+
+        public bool AddItem(ItemStack item)
+        {
+            int s = 0;
+            while (s < 40 && Inventory[s] != null) { }
+            if (s == 40) return false;
+            Inventory[s] = item;
+            return true;
+        }
+
         public void Kill()
         {
             //Game over
         }
-        //TODO: Add inventory!
     }
 }

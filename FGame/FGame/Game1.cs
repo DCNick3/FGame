@@ -23,8 +23,10 @@ namespace FGame
         Texture2D fireballTexture;
         Texture2D chestTexture;
         Texture2D stuffTexture;
+        Texture2D slotTexture;
         Texture2D whitePixel;
-        SpriteFont font;
+        SpriteFont font14;
+        SpriteFont font11;
         Effect smoothLightEffect;
         int tileWidth = 32;
         int tileHeight = 32;
@@ -40,6 +42,8 @@ namespace FGame
         int screenHeight = 600;
         KeyboardState keyboardState;
         KeyboardState lastKeyboardState;
+        MouseState mouseState;
+        MouseState lastMouseState;
         TimeSpan runFreq = TimeSpan.FromSeconds(0.3);
         TimeSpan lastRunUpdate = new TimeSpan(0);
         int playerRunStep = 1;
@@ -50,6 +54,9 @@ namespace FGame
         bool debugInfo = false;
         bool cheatSpeedHack = false;
         bool enableDevCheats = true;
+        bool firstRun = true;
+        bool isMoving = false;
+        ItemStack holdingItem = null;
         Random rnd = new Random();
         GamePole gamePole;
         List<Fireball> fireballs = new List<Fireball>();
@@ -65,12 +72,14 @@ namespace FGame
 
         /*
          * TODO: Block
-         * Add smooth light (Done a bit)
+         * Add smooth light (done)
          * Add bauble hint
-         * Add chunked-world
+         * Add chunked-world (done)
          * Normal onKeyPress (done)
-         * Tree world generating algorithm
+         * Tree world generating algorithm (done)
          * Add abstraction to GamePole and Chunk!
+         * Add auto-loading for chunks 
+         * Add item moving ability ib inventory (done)
          */
 
         Vector2 ScreenCenter {
@@ -86,6 +95,7 @@ namespace FGame
             Content.RootDirectory = "Content";
             player = new Player();
             player.Type = 1;
+            player.AddItem(new ItemStack(Items.torch, 12));
             RegenPole();
         }
 
@@ -121,7 +131,9 @@ namespace FGame
             chestTexture = Content.Load<Texture2D>("chest");
             smoothLightEffect = Content.Load<Effect>("light");
             stuffTexture = Content.Load<Texture2D>("stuff");
-            font = Content.Load<SpriteFont>("font");
+            slotTexture = Content.Load<Texture2D>("slot");
+            font14 = Content.Load<SpriteFont>("font14");
+            font11 = Content.Load<SpriteFont>("font11");
             whitePixel = new Texture2D(GraphicsDevice, 1, 1);
             whitePixel.SetData(new Color[] { Color.White });
         }
@@ -146,43 +158,8 @@ namespace FGame
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Update(GameTime gameTime)
         {
-            bool isMoving = false;
-            lastKeyboardState = keyboardState;
-            keyboardState = Keyboard.GetState();
-            if (keyboardState.IsKeyDown(Keys.Up))
-            {
-                PlayerMove(3);
-                isMoving = true;
-            }
-            if (keyboardState.IsKeyDown(Keys.Right))
-            {
-                PlayerMove(2);
-                isMoving = true;
-            }
-            if (keyboardState.IsKeyDown(Keys.Left))
-            {
-                PlayerMove(1);
-                isMoving = true;
-            }
-            if (keyboardState.IsKeyDown(Keys.Down))
-            {
-                PlayerMove(0);
-                isMoving = true;
-            }
 
-            if (KeyPress(Keys.Q))
-            {
-                if (player.Type == 1 && player.UseSkill(0, gameTime.TotalGameTime))
-                {
-                    fireballs.Add(new Fireball() { X = (int)player.Position.X, Y = (int)player.Position.Y, Direction = player.RunDirection, Speed = 3, Step = 0 });
-                }
-            }
-
-            if (keyboardState.IsKeyDown(Keys.OemTilde))
-            {
-                RegenPole();
-            }
-
+            
             if (gameTime.TotalGameTime - lastRunUpdate > runFreq)
             {
                 if (isMoving)
@@ -212,8 +189,57 @@ namespace FGame
                 }
                 lastRunUpdate = gameTime.TotalGameTime;
             }
+            isMoving = false;
             UpdateFireballs(gameTime);
             lightSources = GetLightSources();
+
+
+            lastKeyboardState = keyboardState;
+            keyboardState = Keyboard.GetState();
+            lastMouseState = mouseState;
+            mouseState = Mouse.GetState();
+            if (firstRun)
+            {
+                firstRun = false;
+                return;
+            }
+
+            if (!player.IsInInventory)
+            {
+                if (keyboardState.IsKeyDown(Keys.Up))
+                {
+                    PlayerMove(3);
+                    isMoving = true;
+                }
+                if (keyboardState.IsKeyDown(Keys.Right))
+                {
+                    PlayerMove(2);
+                    isMoving = true;
+                }
+                if (keyboardState.IsKeyDown(Keys.Left))
+                {
+                    PlayerMove(1);
+                    isMoving = true;
+                }
+                if (keyboardState.IsKeyDown(Keys.Down))
+                {
+                    PlayerMove(0);
+                    isMoving = true;
+                }
+
+                if (KeyPress(Keys.Q))
+                {
+                    if (player.Type == 1 && player.UseSkill(0, gameTime.TotalGameTime))
+                    {
+                        fireballs.Add(new Fireball() { X = (int)player.Position.X, Y = (int)player.Position.Y, Direction = player.RunDirection, Speed = 3, Step = 0 });
+                    }
+                }
+            }
+
+            if (keyboardState.IsKeyDown(Keys.OemTilde))
+            {
+                RegenPole();
+            }
 
             Rectangle playerRect = new Rectangle((int)player.Position.X, (int)player.Position.Y, playerTextureWidth, playerTextureHeight);
             if (KeyPress(Keys.E))
@@ -318,6 +344,153 @@ namespace FGame
             {
                 MouseState s = Mouse.GetState();
                 player.Position += new Vector2(s.X, s.Y) - ScreenCenter;
+            }
+
+            if (KeyPress(Keys.Escape))
+            {
+                player.IsInInventory = !player.IsInInventory;
+            }
+
+            if (KeyPress(Keys.F4))
+            {
+                graphics.ToggleFullScreen();
+            }
+
+            if (!player.IsInInventory)
+            {
+                if (holdingItem != null)
+                {
+                    player.AddItem(holdingItem);
+                    holdingItem = null;
+                }
+                if (KeyPress(Keys.D1))
+                    player.SelectedSlot = 0;
+                if (KeyPress(Keys.D2))
+                    player.SelectedSlot = 1;
+                if (KeyPress(Keys.D3))
+                    player.SelectedSlot = 2;
+                if (KeyPress(Keys.D4))
+                    player.SelectedSlot = 3;
+                if (KeyPress(Keys.D5))
+                    player.SelectedSlot = 4;
+                if (KeyPress(Keys.D6))
+                    player.SelectedSlot = 5;
+                if (KeyPress(Keys.D7))
+                    player.SelectedSlot = 6;
+                if (KeyPress(Keys.D8))
+                    player.SelectedSlot = 7;
+                if (KeyPress(Keys.D9))
+                    player.SelectedSlot = 8;
+
+                if (KeyPress(Keys.D0))
+                    player.SelectedSlot = 9;
+
+                if (KeyPress(Keys.A))
+                {
+                    player.SelectedSlot--;
+                    if (player.SelectedSlot < 0)
+                        player.SelectedSlot += 10;
+                }
+
+                if (KeyPress(Keys.D))
+                {
+                    player.SelectedSlot++;
+                    player.SelectedSlot %= 10;
+                }
+            }
+            else
+            {
+                if (KeyPress(Keys.Up))
+                {
+                    player.SelectedSlot -= 10;
+                    if (player.SelectedSlot < 0)
+                        player.SelectedSlot += 40;
+                    player.SelectedSlot %= 40;
+                }
+                if (KeyPress(Keys.Down))
+                {
+                    player.SelectedSlot += 10;
+                    if (player.SelectedSlot < 0)
+                        player.SelectedSlot += 40;
+                    player.SelectedSlot %= 40;
+                }
+                if (KeyPress(Keys.Left))
+                {
+                    player.SelectedSlot -= 1;
+                    if (player.SelectedSlot < 0)
+                        player.SelectedSlot += 40;
+                    player.SelectedSlot %= 40;
+                }
+                if (KeyPress(Keys.Right))
+                {
+                    player.SelectedSlot += 1;
+                    if (player.SelectedSlot < 0)
+                        player.SelectedSlot += 40;
+                    player.SelectedSlot %= 40;
+                }
+                if (KeyPress(Keys.W))
+                {
+                    ItemStack s = player.Inventory[player.SelectedSlot];
+                    if (holdingItem == null || s == null || s.Type != holdingItem.Type)
+                    {
+                        player.Inventory[player.SelectedSlot] = holdingItem;
+                        holdingItem = s;
+                    }
+                    else
+                    {
+                        int add = holdingItem.Count;
+                        if (add + player.Inventory[player.SelectedSlot].Count > holdingItem.Type.GetMaxStackSize())
+                            add = holdingItem.Type.GetMaxStackSize() - player.Inventory[player.SelectedSlot].Count;
+                        player.Inventory[player.SelectedSlot].Count += add;
+                        holdingItem.Count -= add;
+                        if (holdingItem.Count <= 0)
+                            holdingItem = null;
+                    }
+                }
+                if (KeyPress(Keys.Q))
+                {
+                    ItemStack s = player.Inventory[player.SelectedSlot];
+                    if (s != null)
+                    {
+                        if (holdingItem == null)
+                        {
+                            holdingItem = new ItemStack(s.Type, 1);
+                            s.Count--;
+                        }
+                        else if (holdingItem.Type == s.Type && holdingItem.Count + 1 <= holdingItem.Type.GetMaxStackSize())
+                        {
+                            holdingItem.Count++;
+                            s.Count--;
+                        }
+                        if (s.Count <= 0)
+                            player.Inventory[player.SelectedSlot] = null;
+                    }
+                }
+            }
+
+            if (KeyPress(Keys.S))
+            {
+                ItemStack cs = player.Inventory[player.SelectedSlot];
+                if (cs != null)
+                {
+                    cs.Type.OnUse(player, cs);
+                    player.ValidateInventory();
+                }
+            }
+
+            if (lastMouseState.LeftButton == ButtonState.Released && mouseState.LeftButton == ButtonState.Pressed)
+            {//LClickStart
+
+            }
+
+            if (mouseState.LeftButton == ButtonState.Pressed)
+            {//LClickLong
+
+            }
+
+            if (mouseState.LeftButton == ButtonState.Released && lastMouseState.LeftButton == ButtonState.Pressed)
+            {//LClickEnd
+
             }
 
             base.Update(gameTime);
@@ -480,18 +653,24 @@ namespace FGame
             DrawHealthbar(player.HP, player.MaxHP);
             DrawSkillUsePointBar(player.SkillUsePoint, player.MaxSkillUsePoint, player.BarColor);
             DrawBuffs(player);
+            DrawInventory(player);
+
             if (debugInfo)
             {
-                Vector2 chnkIdIrr = ((player.Position / new Vector2(tileWidth, tileHeight) + new Vector2(gamePole.MinX, gamePole.MinY)) / new Vector2(Chunk.width, Chunk.height));
-                string dbgnfo = "Pos: " + (player.Position).ToString()
-                    + "\nIsRunningSlowly: " + gameTime.IsRunningSlowly
+
+                int x = (int)Math.Floor(player.Position.X / tileWidth / Chunk.width);
+                int y = (int)Math.Floor(player.Position.Y / tileHeight / Chunk.height);
+
+                Vector2 chnkIdIrr = new Vector2(x, y);
+                string dbgnfo = " Pos: " + (player.Position).ToString()
+                    + "\n IsRunningSlowly: " + gameTime.IsRunningSlowly
                     + "\n Chunk: " + new Vector2((int)chnkIdIrr.X, (int)chnkIdIrr.Y);
                 string[] lines = dbgnfo.Split('\n');
                 for (int i = 0; i < lines.Length; i++)
                 {
                     string ln = lines[i];
-                    Vector2 sz = font.MeasureString(ln);
-                    spriteBatch.DrawString(font, ln, new Vector2(screenWidth - sz.X, i * (sz.Y + 1)), Color.White);
+                    Vector2 sz = font14.MeasureString(ln);
+                    spriteBatch.DrawString(font14, ln, new Vector2(screenWidth - sz.X, i * (sz.Y + 1)), Color.White);
                 }
             }
 
@@ -517,7 +696,7 @@ namespace FGame
             Rectangle rectRed = new Rectangle(pos.X, pos.Y, (int)(pos.Width * (hP / maxHP)), pos.Height);
             spriteBatch.Draw(whitePixel, rectCont, Color.White);
             spriteBatch.Draw(whitePixel, rectRed, Color.Red);
-            spriteBatch.DrawString(font, hP.ToString("###"), new Vector2(pos.X + pos.Width / 2f, pos.Y + pos.Height / 2f), Color.Black, 0, font.MeasureString(hP.ToString("###")) / 2f, 1f, SpriteEffects.None, 0);
+            spriteBatch.DrawString(font14, hP.ToString("###"), new Vector2(pos.X + pos.Width / 2f, pos.Y + pos.Height / 2f), Color.Black, 0, font14.MeasureString(hP.ToString("###")) / 2f, 1f, SpriteEffects.None, 0);
         }
 
         private void DrawSkillUsePointBar(float skillUsePoints, float maxSkillUsePoints, Color color)
@@ -527,7 +706,7 @@ namespace FGame
             Rectangle rectRed = new Rectangle(pos.X, pos.Y, (int)(pos.Width * (skillUsePoints / maxSkillUsePoints)), pos.Height);
             spriteBatch.Draw(whitePixel, rectCont, Color.White);
             spriteBatch.Draw(whitePixel, rectRed, color);
-            spriteBatch.DrawString(font, skillUsePoints.ToString("###"), new Vector2(pos.X + pos.Width / 2f, pos.Y + pos.Height / 2f), Color.Black, 0, font.MeasureString(skillUsePoints.ToString("###")) / 2f, 1f, SpriteEffects.None, 0);
+            spriteBatch.DrawString(font14, skillUsePoints.ToString("###"), new Vector2(pos.X + pos.Width / 2f, pos.Y + pos.Height / 2f), Color.Black, 0, font14.MeasureString(skillUsePoints.ToString("###")) / 2f, 1f, SpriteEffects.None, 0);
         }
 
         private int GetDistance(Point a, Point b)
@@ -556,12 +735,20 @@ namespace FGame
 
         private void DrawChests(LightSource[] lightSources)
         {
-            foreach (var chest in gamePole.Chests)
+            foreach (var chunk in gamePole.chunks)
             {
-                Vector2 pos = ScreenCenter - player.Position + new Vector2(chest.GlobPosition.X * chestWidth, chest.GlobPosition.Y * chestHeight - 16);
-                Point center = new Point(chest.GlobPosition.X * chestWidth + chestWidth / 2, chest.GlobPosition.Y * chestHeight + chestHeight / 2 - 16);
-                float lightness = GetLightLevel(center, lightSources);
-                spriteBatch.Draw(chestTexture, pos, new Rectangle(chest.Type * chestWidth, (chest.AnimationFrame) * (chestHeight + 16), chestWidth, chestHeight + 16), Color.White * lightness);
+                if (chunk != null)
+                    foreach (var chest in chunk.Chests)
+                    {
+                        Vector2 pps = (new Vector2(chest.GlobPosition.X * chestWidth, chest.GlobPosition.Y * chestHeight) - player.Position) / 2;
+                        if (pps.X < screenWidth && pps.Y < screenHeight)
+                        {
+                            Vector2 pos = ScreenCenter - player.Position + new Vector2(chest.GlobPosition.X * chestWidth, chest.GlobPosition.Y * chestHeight - 16);
+                            Point center = new Point(chest.GlobPosition.X * chestWidth + chestWidth / 2, chest.GlobPosition.Y * chestHeight + chestHeight / 2 - 16);
+                            float lightness = GetLightLevel(center, lightSources);
+                            spriteBatch.Draw(chestTexture, pos, new Rectangle(chest.Type * chestWidth, (chest.AnimationFrame) * (chestHeight + 16), chestWidth, chestHeight + 16), Color.White * lightness);
+                        }
+                    }
             }
         }
 
@@ -608,6 +795,7 @@ namespace FGame
                 for (int y = gamePole.MinY; y < gamePole.MaxY; y++)
                 {
                     Vector2 pps = (new Vector2(x, y) * tileWidth - player.Position) / 2;
+                    pps = new Vector2(Math.Abs(pps.X), Math.Abs(pps.Y));
                     Tile t = gamePole.GetTileAt(new Point(x, y));
                     if (t != null && t.Id != 0 && pps.X < screenWidth && pps.Y < screenHeight)
                     {
@@ -635,18 +823,115 @@ namespace FGame
             return new Rectangle(x * stuffWidth, y * stuffHeight, stuffWidth, stuffHeight);
         }
 
+        private Texture2D GetStuffTexture(int id)
+        {
+            return stuffTexture;
+        }
+
         private void DrawBuff(Buff buff, Vector2 pos)
         {
             int borderId = 240;
             float scale = 32f / stuffWidth;
             Rectangle borderRect = GetStuffCoord(borderId);
             Vector2 buffImgPos = new Vector2(5, 4.5f);
-            Rectangle buffImgRect = GetStuffCoord(GetBuffStuffId(buff.Type));
+            int buffId = GetBuffStuffId(buff.Type);
+            Rectangle buffImgRect = GetStuffCoord(buffId);
+            Texture2D brdTxt = GetStuffTexture(borderId);
+            Texture2D bffTxt = GetStuffTexture(buffId);
             //Rectangle buffImgDestRect = new Rectangle((int)(pos + buffImgPos).X, (int)(pos + buffImgPos).Y);
 
-            spriteBatch.Draw(stuffTexture, new Rectangle((int)pos.X, (int)pos.Y, 32, 32), borderRect, Color.White);
-            spriteBatch.Draw(stuffTexture, pos + buffImgPos / scale, buffImgRect, Color.White, 0, Vector2.Zero, 1f, SpriteEffects.None, 0);
-            spriteBatch.DrawString(font, buff.GetStringTime(), pos + new Vector2(16f, 36f), Color.White, 0f, font.MeasureString(buff.GetStringTime()) / 2f, 1f, SpriteEffects.None, 0);
+            spriteBatch.Draw(brdTxt, new Rectangle((int)pos.X, (int)pos.Y, 32, 32), borderRect, Color.White);
+            spriteBatch.Draw(bffTxt, pos + buffImgPos / scale, buffImgRect, Color.White, 0, Vector2.Zero, 1f, SpriteEffects.None, 0);
+            spriteBatch.DrawString(font14, buff.GetStringTime(), pos + new Vector2(16f, 36f), Color.White, 0f, font14.MeasureString(buff.GetStringTime()) / 2f, 1f, SpriteEffects.None, 0);
+        }
+
+        private void DrawItemStack(ItemStack stack, Vector2 pos)
+        {
+            int itmTxtId = stack.Type.GetTextureId(stack);
+            Texture2D stff = GetStuffTexture(itmTxtId);
+            Rectangle itmSrcPos = GetStuffCoord(itmTxtId);
+            string cnt = stack.Count.ToString();
+
+            spriteBatch.Draw(stff, pos, itmSrcPos, Color.White);
+            if (stack.Count != 1)
+                spriteBatch.DrawString(font11, cnt,  pos + new Vector2(stuffWidth / 2f, 1.3f * stuffHeight), Color.White, 0, font11.MeasureString(cnt) / 2, 1f, SpriteEffects.None, 0);
+        }
+
+        private void DrawInventory(Player player)
+        {
+            int irmpl = 10;
+            ItemStack[] itm = player.Inventory;
+            float xsz = irmpl * 50f + 48f;
+            Vector2 offset = new Vector2(screenWidth - xsz, 10);
+
+            for (int y = 0; y < (player.IsInInventory ? 4 : 1); y++)
+            {
+                for (int x = 0; x < irmpl; x++)
+                {
+                    ItemStack stk = itm[x + y * irmpl];
+                    Vector2 pos = offset + new Vector2(x * 50, y * 50 + (y == 0 ? 0 : 15f));
+                    Color c;
+                    switch (x)
+                    {
+                        case 0:
+                            c = Color.DarkBlue;
+                            break;
+                        case 1:
+                            c = Color.DarkRed;
+                            break;
+                        case 2:
+                            c = Color.DarkOrange;
+                            break;
+                        case 3:
+                            c = Color.DarkGreen;
+                            break;
+                        case 4:
+                            c = Color.DarkMagenta;
+                            break;
+                        case 5:
+                            c = Color.DarkGoldenrod;
+                            break;
+                        case 6:
+                            c = Color.DarkCyan;
+                            break;
+                        case 7:
+                            c = Color.DarkViolet;
+                            break;
+                        case 8:
+                            c = Color.DarkTurquoise;
+                            break;
+                        case 9:
+                            c = Color.DarkKhaki;
+                            break;
+                        default:
+                            c = Color.Black;
+                            break;
+                    }
+
+                    if (!player.IsInInventory && y == 0 && player.SelectedSlot == x)
+                        spriteBatch.Draw(slotTexture, new Rectangle((int)pos.X - 12, (int)pos.Y - 10, 52, 52), c * 1.5f);
+                    else
+                        if (player.IsInInventory && y == player.SelectedSlot / 10 && x == player.SelectedSlot % 10)
+                        spriteBatch.Draw(slotTexture, new Rectangle((int)pos.X - 12, (int)pos.Y - 10, 52, 52), c * 1.5f);
+                    else
+                        spriteBatch.Draw(slotTexture, new Rectangle((int)pos.X - 10, (int)pos.Y - 8, 48, 48), c);
+                    if (stk != null)
+                        DrawItemStack(stk, pos - new Vector2(0, 3));
+                    if (y == 0)
+                    {
+                        string n = ((x + 1) % 10).ToString();
+                        if (!player.IsInInventory && y == 0 && player.SelectedSlot == x)
+                            spriteBatch.DrawString(font14, n, pos + new Vector2(48f / 2f - 10, 50f), Color.White, 0, font14.MeasureString(n) / 2f, 1f, SpriteEffects.None, 0);
+                        else
+                            spriteBatch.DrawString(font11, n, pos + new Vector2(48f / 2f - 10, 50f), Color.White, 0, font11.MeasureString(n) / 2f, 1f, SpriteEffects.None, 0);
+                    }
+                }
+            }
+
+            if (player.IsInInventory && holdingItem != null)
+            {
+                DrawItemStack(holdingItem, offset + new Vector2(xsz - 48f, 0f));
+            }
         }
 
         private int GetBuffStuffId(BuffType type)

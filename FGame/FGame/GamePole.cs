@@ -173,7 +173,7 @@ namespace FGame
         }
         
 
-        private Chunk[,] chunks;
+        internal Chunk[,] chunks;
 
         public Chest[] Chests
         {
