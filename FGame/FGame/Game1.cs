@@ -492,7 +492,6 @@ namespace FGame
             {//LClickEnd
 
             }
-
             base.Update(gameTime);
         }
 

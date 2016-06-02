@@ -53,6 +53,13 @@ namespace FGame
                 return ((Buffs.Where((Buff f) => f.Type == BuffType.Torch).Count() > 0 ? 1.5f : 1f));
             }
         }
+        public bool CanUseSwords
+        {
+            get
+            {
+                return Type == 0;
+            }
+        }
         public ItemStack[] Inventory { get; private set; }
 
         private int hudSlot;
@@ -132,7 +139,7 @@ namespace FGame
         public bool AddItem(ItemStack item)
         {
             int s = 0;
-            while (s < 40 && Inventory[s] != null) { }
+            while (s < 40 && Inventory[s] != null) { s++; }
             if (s == 40) return false;
             Inventory[s] = item;
             return true;

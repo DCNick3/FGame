@@ -54,6 +54,33 @@ namespace FGame
         }
     }
 
+    public class ItemSword : Item
+    {
+        public ItemSword(ItemType type, int texture) : base(type, texture)
+        {}
+
+        private int damage = 0;
+
+        public virtual ItemSword SetDamage(int value)
+        {
+            damage = value;
+            return this;
+        }
+
+        public virtual int GetDamage()
+        {
+            return damage;
+        }
+
+        public override void OnUse(Player player, ItemStack stack)
+        {
+            if (player.CanUseSwords)
+            {
+
+            }
+        }
+    }
+
     public class ItemStack
     {
         public ItemStack(Item type, int count)
