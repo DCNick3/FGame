@@ -24,6 +24,7 @@ namespace FGame
         Texture2D chestTexture;
         Texture2D stuffTexture;
         Texture2D slotTexture;
+        Texture2D swordTexture;
         Texture2D whitePixel;
         SpriteFont font14;
         SpriteFont font11;
@@ -40,6 +41,8 @@ namespace FGame
         int playerTextureHeight = 32;
         int screenWidth = 800;
         int screenHeight = 600;
+        int swordWidth = 32;
+        int swordHeight = 32;
         KeyboardState keyboardState;
         KeyboardState lastKeyboardState;
         MouseState mouseState;
@@ -48,14 +51,13 @@ namespace FGame
         TimeSpan lastRunUpdate = new TimeSpan(0);
         int playerRunStep = 1;
         bool runStepDirection = false;
-        float playerMoveSpeed = 2;
         bool enableSmoothLightning = true;
         bool cheatFullBright = false;
         bool debugInfo = false;
-        bool cheatSpeedHack = false;
         bool enableDevCheats = true;
         bool firstRun = true;
         bool isMoving = false;
+        float targetFPS = 60.0F;
         ItemStack holdingItem = null;
         Random rnd = new Random();
         GamePole gamePole;
@@ -80,6 +82,7 @@ namespace FGame
          * Add abstraction to GamePole and Chunk!
          * Add auto-loading for chunks 
          * Add item moving ability ib inventory (done)
+         * Add abstraction: Tiles & Chests are StaticObject's 
          */
 
         Vector2 ScreenCenter {
@@ -94,7 +97,7 @@ namespace FGame
             graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
             player = new Player();
-            player.Type = 1;
+            player.Type = 0;
             player.AddItem(new ItemStack(Items.torch, 12));
             RegenPole();
         }
@@ -112,6 +115,8 @@ namespace FGame
             graphics.PreferredBackBufferHeight = screenHeight;
             graphics.PreferredBackBufferWidth = screenWidth;
             graphics.ApplyChanges();
+
+            TargetElapsedTime = TimeSpan.FromSeconds(1F / targetFPS);
 
             base.Initialize();
         }
@@ -132,6 +137,7 @@ namespace FGame
             smoothLightEffect = Content.Load<Effect>("light");
             stuffTexture = Content.Load<Texture2D>("stuff");
             slotTexture = Content.Load<Texture2D>("slot");
+            swordTexture = Content.Load<Texture2D>("sword");
             font14 = Content.Load<SpriteFont>("font14");
             font11 = Content.Load<SpriteFont>("font11");
             whitePixel = new Texture2D(GraphicsDevice, 1, 1);
@@ -208,30 +214,34 @@ namespace FGame
             {
                 if (keyboardState.IsKeyDown(Keys.Up))
                 {
-                    PlayerMove(3);
+                    PlayerMove(3, gameTime);
                     isMoving = true;
                 }
                 if (keyboardState.IsKeyDown(Keys.Right))
                 {
-                    PlayerMove(2);
+                    PlayerMove(2, gameTime);
                     isMoving = true;
                 }
                 if (keyboardState.IsKeyDown(Keys.Left))
                 {
-                    PlayerMove(1);
+                    PlayerMove(1, gameTime);
                     isMoving = true;
                 }
                 if (keyboardState.IsKeyDown(Keys.Down))
                 {
-                    PlayerMove(0);
+                    PlayerMove(0, gameTime);
                     isMoving = true;
                 }
 
                 if (KeyPress(Keys.Q))
                 {
-                    if (player.Type == 1 && player.UseSkill(0, gameTime.TotalGameTime))
+                    if (player.Type == 1 && player.UseSkill(0, gameTime))
                     {
                         fireballs.Add(new Fireball() { X = (int)player.Position.X, Y = (int)player.Position.Y, Direction = player.RunDirection, Speed = 3, Step = 0 });
+                    }
+                    if (player.CanUseSwords && player.UseSkill(0, gameTime))
+                    {
+                        player.CastSword(48, 0.3F, player.RunDirection);
                     }
                 }
             }
@@ -283,7 +293,7 @@ namespace FGame
 
             if (KeyPress(Keys.T))
             {
-                if (player.Type == 1 && player.UseSkill(1, gameTime.TotalGameTime))
+                if (player.Type == 1 && player.UseSkill(1, gameTime))
                     player.AddBuff(new Buff(BuffType.Torch, 10));
             }
 
@@ -333,17 +343,23 @@ namespace FGame
 
             if (enableDevCheats && KeyPress(Keys.V))
             {
-                cheatSpeedHack = !cheatSpeedHack;
-                if (cheatSpeedHack)
-                    playerMoveSpeed *= 3;
-                else
-                    playerMoveSpeed /= 3;
+                player.isSpeedHack = !player.isSpeedHack;
             }
 
             if (enableDevCheats && KeyPress(Keys.B))
             {
                 MouseState s = Mouse.GetState();
                 player.Position += new Vector2(s.X, s.Y) - ScreenCenter;
+            }
+
+            if (enableDevCheats && KeyPress(Keys.N))
+            {
+                player.CastSword(10000000, 1F, player.RunDirection);
+            }
+
+            if (enableDevCheats && KeyPress(Keys.M))
+            {
+                player.UnCastSword();
             }
 
             if (KeyPress(Keys.Escape))
@@ -510,23 +526,24 @@ namespace FGame
             return result.ToArray();
         }
 
-        private void PlayerMove(int direction)
+        private void PlayerMove(int direction, GameTime gameTime)
         {
             player.RunDirection = direction;
+            if (!player.CanMove) return;
             Vector2 newPos = player.Position;
             switch (direction)
             {
                 case 0:
-                    newPos.Y += playerMoveSpeed;
+                    newPos.Y += player.Speed * (float)gameTime.ElapsedGameTime.TotalMilliseconds;
                     break;
                 case 1:
-                    newPos.X -= playerMoveSpeed;
+                    newPos.X -= player.Speed * (float)gameTime.ElapsedGameTime.TotalMilliseconds;
                     break;
                 case 2:
-                    newPos.X += playerMoveSpeed;
+                    newPos.X += player.Speed * (float)gameTime.ElapsedGameTime.TotalMilliseconds;
                     break;
                 case 3:
-                    newPos.Y -= playerMoveSpeed;
+                    newPos.Y -= player.Speed * (float)gameTime.ElapsedGameTime.TotalMilliseconds;
                     break;
             }
             Rectangle pr = new Rectangle((int)newPos.X + 4, (int)newPos.Y + 4, playerTextureWidth - 8, playerTextureHeight - 4);
@@ -620,6 +637,7 @@ namespace FGame
             DrawTiles(lightSources);
             DrawChests(lightSources);
             DrawFireballs();
+            DrawSword(ScreenCenter + new Vector2(playerTextureWidth, playerTextureHeight) / 2f, player.SwordDirection, player.GetSwordLength(gameTime), player.SwordColor);
             DrawPlayer();
             //spriteBatch.Draw(lightnessMap, Vector2.Zero, new Color(255, 255, 255, 127));
 
@@ -654,6 +672,7 @@ namespace FGame
             DrawBuffs(player);
             DrawInventory(player);
 
+
             if (debugInfo)
             {
 
@@ -663,7 +682,8 @@ namespace FGame
                 Vector2 chnkIdIrr = new Vector2(x, y);
                 string dbgnfo = " Pos: " + (player.Position).ToString()
                     + "\n IsRunningSlowly: " + gameTime.IsRunningSlowly
-                    + "\n Chunk: " + new Vector2((int)chnkIdIrr.X, (int)chnkIdIrr.Y);
+                    + "\n Chunk: " + new Vector2((int)chnkIdIrr.X, (int)chnkIdIrr.Y)
+                    + "\n FPS: " + (int)(1.0F / gameTime.ElapsedGameTime.TotalSeconds);
                 string[] lines = dbgnfo.Split('\n');
                 for (int i = 0; i < lines.Length; i++)
                 {
@@ -790,13 +810,22 @@ namespace FGame
 
         private void DrawTiles(LightSource[] lightSources)
         {
-            for (int x = gamePole.MinX; x < gamePole.MaxX; x++)
-                for (int y = gamePole.MinY; y < gamePole.MaxY; y++)
+            //Optimize~
+            int mX = (int)Math.Floor((player.Position.X - screenWidth) / tileWidth);
+            int mY = (int)Math.Floor((player.Position.Y- screenHeight) / tileHeight);
+            if (mX < gamePole.MinX)
+                mX = gamePole.MinX;
+            if (mY < gamePole.MinY)
+                mY = gamePole.MinY;
+            int mxX = (int)Math.Floor((player.Position.X + screenWidth) / tileWidth);
+            int mxY = (int)Math.Floor((player.Position.Y + screenHeight) / tileHeight);
+            for (int x = mX; x < mxX; x++)
+                for (int y = mY; y < mxY; y++)
                 {
                     Vector2 pps = (new Vector2(x, y) * tileWidth - player.Position) / 2;
                     pps = new Vector2(Math.Abs(pps.X), Math.Abs(pps.Y));
                     Tile t = gamePole.GetTileAt(new Point(x, y));
-                    if (t != null && t.Id != 0 && pps.X < screenWidth && pps.Y < screenHeight)
+                    if (t != null && t.Id != 0 /*&& pps.X < screenWidth && pps.Y < screenHeight*/)
                     {
                         Point center = new Point(x * tileWidth + tileWidth / 2, y * tileHeight + tileHeight / 2);
                         float lightness = GetLightLevel(center, lightSources);
@@ -944,6 +973,47 @@ namespace FGame
                 default:
                     return 0;
             }
+        }
+
+        private void DrawSword(Vector2 position, int direction, int length, Color color)
+        {
+            //DLRU
+            if (length == 0) return;
+            int c1 = (int)Math.Ceiling((float)length / swordHeight) - 1;
+            int rem = length % swordHeight;
+            if (rem == 0) rem = swordHeight;
+            int xm = swordWidth;
+            int ym = swordHeight;
+            float rot = 0f;
+            Vector2 origin = new Vector2(swordWidth / 2F, swordHeight);
+            switch (direction)
+            {
+                case 0:
+                    ym *= 1;
+                    xm *= 0;
+                    rot = (float)Math.PI;
+                    break;
+                case 1:
+                    ym *= 0;
+                    xm *= -1;
+                    rot = 1.5f * (float)Math.PI;
+                    break;
+                case 2:
+                    ym *= 0;
+                    xm *= 1;
+                    rot = 0.5f * (float)Math.PI;
+                    break;
+                case 3:
+                    ym *= -1;
+                    xm *= 0;
+                    rot = 0f;
+                    break;
+            }
+            for (int i = 0; i < c1; i++)
+            {
+                spriteBatch.Draw(swordTexture, new Rectangle((int)(position.X + xm * i - xm / swordWidth * (swordHeight - rem)), (int)(position.Y + ym * i - ym / swordHeight * (swordHeight - rem)), swordWidth, (i == 0 ? rem : swordHeight)), new Rectangle(swordWidth, 0, swordWidth, (i == 0 ? rem : swordHeight)), color, rot, origin, SpriteEffects.None, 0);
+            }
+            spriteBatch.Draw(swordTexture, new Rectangle((int)(position.X + xm * c1 - xm / swordWidth * (swordHeight - rem)), (int)(position.Y + ym * c1 - ym / swordHeight * (swordHeight - rem)), swordWidth, (c1 == 0 ? rem : swordHeight)), new Rectangle(0, 0, swordWidth, (c1 == 0 ? rem : swordHeight)), color, rot, origin, SpriteEffects.None, 0);
         }
     }
 }

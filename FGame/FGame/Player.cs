@@ -15,8 +15,47 @@ namespace FGame
             MaxHP = 100;
             SkillUsePoint = 100;
             MaxSkillUsePoint = 100;
+            SwordColor = Color.DarkGreen;
         }
 
+        private bool _canMove = true;
+        private bool _isSwordCasted;
+        private float _swordPos = 0;
+        private const float _swordSpeedC = 0.03F;
+        private float _swordSpeed = 0;
+        private int _maxSword = 48;
+        public Color SwordColor { get; set; }
+        public int SwordDirection { get; set; }
+        public int GetSwordLength(GameTime gameTime)
+        {
+            if (_isSwordCasted)
+            {
+                _swordPos += _swordSpeed * (float)gameTime.ElapsedGameTime.TotalMilliseconds;
+                if (_swordPos >= _maxSword)
+                {
+                    _swordSpeed = -_swordSpeed;
+                }
+                if (_swordPos <= 0)
+                {
+                    _swordSpeed = 0;
+                    _swordPos = 0;
+                    _isSwordCasted = false;
+                }
+                return (int)_swordPos;
+            }
+            else
+                return 0;
+        }
+        public bool CanMove
+        {
+            get
+            {
+                return _canMove && !_isSwordCasted;
+            }
+        }
+        public bool IsSwordCasted { get { return _isSwordCasted; } }
+        internal bool isSpeedHack = false;
+        public float Speed { get { return isSpeedHack ? 0.48F : 0.12F; } }
         public int Type { get; internal set; }
         public Vector2 Position { get; internal set; }
         public int RunDirection { get; internal set; }
@@ -108,18 +147,18 @@ namespace FGame
         }
 
         TimeSpan[] lastSkillUses = new TimeSpan[2];
-        public bool UseSkill(int skillN, TimeSpan totalGameTime)
+        public bool UseSkill(int skillN, GameTime gameTime)
         {
-            if (skillN == 0 && SkillUsePoint >= 10 && totalGameTime - lastSkillUses[skillN] >= SkillCooldown(skillN))
+            if (skillN == 0 && SkillUsePoint >= 10 && gameTime.TotalGameTime - lastSkillUses[skillN] >= SkillCooldown(skillN))
             {
-                lastSkillUses[skillN] = totalGameTime;
+                lastSkillUses[skillN] = gameTime.TotalGameTime;
                 SkillUsePoint -= 10;
                 return true;
             }
             else
-            if (skillN == 1 && SkillUsePoint >= 20 && totalGameTime - lastSkillUses[skillN] >= SkillCooldown(skillN))
+            if (skillN == 1 && SkillUsePoint >= 20 && gameTime.TotalGameTime - lastSkillUses[skillN] >= SkillCooldown(skillN))
             {
-                lastSkillUses[skillN] = totalGameTime;
+                lastSkillUses[skillN] = gameTime.TotalGameTime;
                 SkillUsePoint -= 20;
                 return true;
             }
@@ -145,9 +184,25 @@ namespace FGame
             return true;
         }
 
+        public void CastSword(int length, float speed, int swordDirection)
+        {
+            _isSwordCasted = true;
+            _maxSword = length;
+            _swordPos = 0;
+            _swordSpeed = speed;
+            SwordDirection = RunDirection;
+        }
+
         public void Kill()
         {
             //Game over
+        }
+
+        internal void UnCastSword()
+        {
+            _isSwordCasted = false;
+            _swordSpeed = 0;
+            _swordPos = 0;
         }
     }
 }
