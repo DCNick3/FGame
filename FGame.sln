@@ -1,11 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.31101.0
+# Visual Studio 14
+VisualStudioVersion = 14.0.25123.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FGame", "FGame\FGame\FGame.csproj", "{F9CC436D-F5DF-41A6-A612-E69E4DBA429F}"
 EndProject
-Project("{96E2B04D-8817-42C6-938A-82C39BA4D311}") = "FGameContent", "FGame\FGameContent\FGameContent.contentproj", "{B73507ED-D10F-4BC5-BA0E-000462F1FB00}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FGameContent", "FGame\FGameContent\FGameContent.contentproj", "{B73507ED-D10F-4BC5-BA0E-000462F1FB00}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ParticleSystem", "ParticleSystem\ParticleSystem.csproj", "{D9858436-0745-4EA9-96D2-D656C9D3AD3F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -19,6 +21,10 @@ Global
 		{F9CC436D-F5DF-41A6-A612-E69E4DBA429F}.Release|x86.Build.0 = Release|x86
 		{B73507ED-D10F-4BC5-BA0E-000462F1FB00}.Debug|x86.ActiveCfg = Debug|x86
 		{B73507ED-D10F-4BC5-BA0E-000462F1FB00}.Release|x86.ActiveCfg = Release|x86
+		{D9858436-0745-4EA9-96D2-D656C9D3AD3F}.Debug|x86.ActiveCfg = Debug|x86
+		{D9858436-0745-4EA9-96D2-D656C9D3AD3F}.Debug|x86.Build.0 = Debug|x86
+		{D9858436-0745-4EA9-96D2-D656C9D3AD3F}.Release|x86.ActiveCfg = Release|x86
+		{D9858436-0745-4EA9-96D2-D656C9D3AD3F}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

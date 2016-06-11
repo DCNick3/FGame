@@ -205,4 +205,15 @@ namespace FGame
             _swordPos = 0;
         }
     }
+
+    public class SwordDrawInfo
+    {
+        public SwordDrawInfo()
+        {
+
+        }
+
+        public double Rotation { get; set; }
+        public int Length { get; set; }
+    }
 }

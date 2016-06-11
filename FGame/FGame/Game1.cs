@@ -58,6 +58,7 @@ namespace FGame
         bool firstRun = true;
         bool isMoving = false;
         float targetFPS = 60.0F;
+        double r = 0;
         ItemStack holdingItem = null;
         Random rnd = new Random();
         GamePole gamePole;
@@ -83,6 +84,7 @@ namespace FGame
          * Add auto-loading for chunks 
          * Add item moving ability ib inventory (done)
          * Add abstraction: Tiles & Chests are StaticObject's 
+         * Add light flikering
          */
 
         Vector2 ScreenCenter {
@@ -638,6 +640,12 @@ namespace FGame
             DrawChests(lightSources);
             DrawFireballs();
             DrawSword(ScreenCenter + new Vector2(playerTextureWidth, playerTextureHeight) / 2f, player.SwordDirection, player.GetSwordLength(gameTime), player.SwordColor);
+
+            //DrawSword(ScreenCenter + new Vector2(playerTextureWidth, playerTextureHeight) / 2, r, 48, Color.Blue);
+            //DrawSword(ScreenCenter + new Vector2(playerTextureWidth, playerTextureHeight) / 2, r + Math.PI, 48, Color.Blue);
+            //DrawSword(ScreenCenter + new Vector2(playerTextureWidth, playerTextureHeight) / 2, r + Math.PI * 1.5, 48, Color.Green);
+            //DrawSword(ScreenCenter + new Vector2(playerTextureWidth, playerTextureHeight) / 2, r + Math.PI * 0.5, 48, Color.Green);
+            //r += Math.PI / 20;
             DrawPlayer();
             //spriteBatch.Draw(lightnessMap, Vector2.Zero, new Color(255, 255, 255, 127));
 
@@ -671,7 +679,6 @@ namespace FGame
             DrawSkillUsePointBar(player.SkillUsePoint, player.MaxSkillUsePoint, player.BarColor);
             DrawBuffs(player);
             DrawInventory(player);
-
 
             if (debugInfo)
             {
@@ -1014,6 +1021,48 @@ namespace FGame
                 spriteBatch.Draw(swordTexture, new Rectangle((int)(position.X + xm * i - xm / swordWidth * (swordHeight - rem)), (int)(position.Y + ym * i - ym / swordHeight * (swordHeight - rem)), swordWidth, (i == 0 ? rem : swordHeight)), new Rectangle(swordWidth, 0, swordWidth, (i == 0 ? rem : swordHeight)), color, rot, origin, SpriteEffects.None, 0);
             }
             spriteBatch.Draw(swordTexture, new Rectangle((int)(position.X + xm * c1 - xm / swordWidth * (swordHeight - rem)), (int)(position.Y + ym * c1 - ym / swordHeight * (swordHeight - rem)), swordWidth, (c1 == 0 ? rem : swordHeight)), new Rectangle(0, 0, swordWidth, (c1 == 0 ? rem : swordHeight)), color, rot, origin, SpriteEffects.None, 0);
+        }
+
+        private void DrawSword(Vector2 position, double direction, int length, Color color)
+        {
+            //DLRU
+            if (length == 0) return;
+            int c1 = (int)Math.Ceiling((float)length / swordHeight) - 1;
+            int rem = length % swordHeight;
+            if (rem == 0) rem = swordHeight;
+            Vector2 m = Vector2.Zero;
+            m.X = (float)(Math.Sin(direction) * swordWidth);
+            m.Y = -(float)(Math.Cos(direction) * swordHeight);
+            float rot = (float)direction;
+            Vector2 origin = new Vector2(swordWidth / 2F, swordHeight);
+            /*switch (direction)
+            {
+                case 0:
+                    ym *= 1;
+                    xm *= 0;
+                    rot = (float)Math.PI;
+                    break;
+                case 1:
+                    ym *= 0;
+                    xm *= -1;
+                    rot = 1.5f * (float)Math.PI;
+                    break;
+                case 2:
+                    ym *= 0;
+                    xm *= 1;
+                    rot = 0.5f * (float)Math.PI;
+                    break;
+                case 3:
+                    ym *= -1;
+                    xm *= 0;
+                    rot = 0f;
+                    break;
+            }*/
+            for (int i = 0; i < c1; i++)
+            {
+                spriteBatch.Draw(swordTexture, new Rectangle((int)(position.X + m.X * i - m.X / swordWidth * (swordHeight - rem)), (int)(position.Y + m.Y * i - m.Y / swordHeight * (swordHeight - rem)), swordWidth, (i == 0 ? rem : swordHeight)), new Rectangle(swordWidth, 0, swordWidth, (i == 0 ? rem : swordHeight)), color, rot, origin, SpriteEffects.None, 0);
+            }
+            spriteBatch.Draw(swordTexture, new Rectangle((int)(position.X + m.X * c1 - m.X / swordWidth * (swordHeight - rem)), (int)(position.Y + m.Y * c1 - m.Y / swordHeight * (swordHeight - rem)), swordWidth, (c1 == 0 ? rem : swordHeight)), new Rectangle(0, 0, swordWidth, (c1 == 0 ? rem : swordHeight)), color, rot, origin, SpriteEffects.None, 0);
         }
     }
 }

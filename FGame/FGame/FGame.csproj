@@ -93,8 +93,13 @@
     <Content Include="GameThumbnail.png">
       <XnaPlatformSpecific>true</XnaPlatformSpecific>
     </Content>
+    <Content Include="Mercury.ParticleEngine.Core.dll" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\ParticleSystem\ParticleSystem.csproj">
+      <Project>{d9858436-0745-4ea9-96d2-d656c9d3ad3f}</Project>
+      <Name>ParticleSystem</Name>
+    </ProjectReference>
     <ProjectReference Include="..\FGameContent\FGameContent.contentproj">
       <Name>FGameContent</Name>
       <XnaReferenceType>Content</XnaReferenceType>
