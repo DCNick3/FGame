@@ -81,6 +81,8 @@
     <Compile Include="Hint.cs" />
     <Compile Include="Item.cs" />
     <Compile Include="LightSource.cs" />
+    <Compile Include="Particle.cs" />
+    <Compile Include="ParticleController.cs" />
     <Compile Include="Player.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Program.cs" />
@@ -96,10 +98,6 @@
     <Content Include="Mercury.ParticleEngine.Core.dll" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\ParticleSystem\ParticleSystem.csproj">
-      <Project>{d9858436-0745-4ea9-96d2-d656c9d3ad3f}</Project>
-      <Name>ParticleSystem</Name>
-    </ProjectReference>
     <ProjectReference Include="..\FGameContent\FGameContent.contentproj">
       <Name>FGameContent</Name>
       <XnaReferenceType>Content</XnaReferenceType>

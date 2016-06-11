@@ -8,8 +8,9 @@ using Microsoft.Xna.Framework.GamerServices;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Media;
+using FGame;
 
-namespace TestyParticleSystem
+namespace FGame.ParticleSystem
 {
     public class ParticleController
     {
@@ -123,6 +124,11 @@ namespace TestyParticleSystem
             direction.X = (float)Math.Cos(angle) * length;
             direction.Y = -(float)Math.Sin(angle) * length;
             return direction;
+        }
+
+        public IEnumerable<LightSource> GetLightSources()
+        {
+            throw new NotImplementedException();
         }
     }
 }

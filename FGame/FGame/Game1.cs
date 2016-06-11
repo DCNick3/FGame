@@ -8,6 +8,7 @@ using Microsoft.Xna.Framework.GamerServices;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Media;
+using FGame.ParticleSystem;
 
 namespace FGame
 {
@@ -29,6 +30,7 @@ namespace FGame
         SpriteFont font14;
         SpriteFont font11;
         Effect smoothLightEffect;
+        Effect smoothLightMapperEffect;
         int tileWidth = 32;
         int tileHeight = 32;
         int chestWidth = 32;
@@ -72,6 +74,8 @@ namespace FGame
         TimeSpan lastFireballSpawn = new TimeSpan(0);
         TimeSpan chestAnimationSpeed = TimeSpan.FromSeconds(0.2);
         TimeSpan lastChestAnimation = new TimeSpan(0);
+        internal ParticleController particleController;
+        internal GameTime gameTime;
 
         /*
          * TODO: Block
@@ -98,10 +102,11 @@ namespace FGame
         {
             graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
-            player = new Player();
-            player.Type = 0;
+            player = new Player(this);
+            player.Type = 1;
             player.AddItem(new ItemStack(Items.torch, 12));
             RegenPole();
+            particleController = new ParticleController();
         }
 
         /// <summary>
@@ -136,14 +141,16 @@ namespace FGame
             tileTexture = Content.Load<Texture2D>("tiles");
             fireballTexture = Content.Load<Texture2D>("fireballs");
             chestTexture = Content.Load<Texture2D>("chest");
-            smoothLightEffect = Content.Load<Effect>("light");
             stuffTexture = Content.Load<Texture2D>("stuff");
             slotTexture = Content.Load<Texture2D>("slot");
             swordTexture = Content.Load<Texture2D>("sword");
+            smoothLightEffect = Content.Load<Effect>("light");
+            smoothLightMapperEffect = Content.Load<Effect>("lightMapper");
             font14 = Content.Load<SpriteFont>("font14");
             font11 = Content.Load<SpriteFont>("font11");
             whitePixel = new Texture2D(GraphicsDevice, 1, 1);
             whitePixel.SetData(new Color[] { Color.White });
+            particleController.LoadContent(Content);
         }
 
         /// <summary>
@@ -166,7 +173,7 @@ namespace FGame
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Update(GameTime gameTime)
         {
-
+            this.gameTime = gameTime;
             
             if (gameTime.TotalGameTime - lastRunUpdate > runFreq)
             {
@@ -510,6 +517,12 @@ namespace FGame
             {//LClickEnd
 
             }
+
+            particleController.Update(gameTime);
+            if (player.Type == 1)
+            {
+                particleController.PlayerWizardManaSparks(player.Position);
+            }
             base.Update(gameTime);
         }
 
@@ -607,19 +620,75 @@ namespace FGame
                     {
                         fireball.X = (int)newPos.X;
                         fireball.Y = (int)newPos.Y;
+                        particleController.FireballFlySparks(newPos);
                     }
                     else
                     {
                         td.Add(fireball);
                     }
                 }
-                fireballs.RemoveAll((Fireball f) => td.IndexOf(f) != -1);
+                for (int i = 0; i < fireballs.Count; i++)
+                {
+                    if (td.IndexOf(fireballs[i]) != -1)
+                    {
+                        particleController.FireballDestroySparks(new Vector2(fireballs[i].X, fireballs[i].Y));
+                        fireballs.RemoveAt(i);
+                        i--;
+                        continue;
+                    }
+                }
+                //fireballs.RemoveAll((Fireball f) => td.IndexOf(f) != -1);
 
 
                 lastFireballMoveUpdate = gameTime.TotalGameTime;
             }
         }
 
+        
+        private Texture2D ConstructLightMap(Vector4[] lightSources)
+        {
+            smoothLightEffect.Parameters["screenSize"].SetValue(new Vector2(screenWidth, screenHeight));
+
+            RenderTarget2D rt = new RenderTarget2D(GraphicsDevice, screenWidth, screenHeight);
+            RenderTarget2D lrt = null;
+
+            GraphicsDevice.SetRenderTarget(rt);
+            GraphicsDevice.Clear(Color.Black);
+            lrt = rt;
+            rt = new RenderTarget2D(GraphicsDevice, screenWidth, screenHeight);
+
+            List<Vector4> liteSources = lightSources.ToList();
+            Vector4[] arr = new Vector4[5];
+
+
+            while (liteSources.Count != 0)
+            {
+                for (int i = 0; i < arr.Length; i++)
+                {
+                    if (liteSources.Count > 0)
+                    {
+                        arr[i] = liteSources[0];
+                        liteSources.RemoveAt(0);
+                    }
+                    else
+                        arr[i] = new Vector4(0);
+                }
+                smoothLightEffect.Parameters["liteSource"].SetValue(arr);
+                GraphicsDevice.SetRenderTarget(rt);
+                GraphicsDevice.Clear(Color.Black);
+                spriteBatch.Begin(SpriteSortMode.BackToFront, BlendState.Additive, SamplerState.PointClamp, DepthStencilState.Default, RasterizerState.CullNone, smoothLightEffect);
+
+                spriteBatch.Draw(lrt, new Rectangle(0, 0, screenWidth, screenHeight), Color.White);
+
+                spriteBatch.End();
+                lrt.Dispose();
+                lrt = rt;
+                rt = new RenderTarget2D(GraphicsDevice, screenWidth, screenHeight);
+            }
+            GraphicsDevice.SetRenderTarget(null);
+            rt.Dispose();
+            return lrt;
+        }
 
         /// <summary>
         /// This is called when the game should draw itself.
@@ -651,23 +720,25 @@ namespace FGame
 
 
             spriteBatch.End();
+            particleController.Draw(spriteBatch, player.Position - ScreenCenter - new Vector2(32, 32) / 2);
 
-            GraphicsDevice.SetRenderTarget(null);
+            //GraphicsDevice.SetRenderTarget(null);
             if (enableSmoothLightning)
             {
-                smoothLightEffect.Parameters["screenSize"].SetValue(new Vector2(screenWidth, screenHeight));
-                Vector4[] liteSources = (from ls in lightSources select new Vector4(new Vector2(ls.Position.X, ls.Position.Y) - player.Position + ScreenCenter, ls.Strenght, ls.Max)).ToArray();
-                Vector4[] arr = new Vector4[5];
+                //smoothLightEffect.Parameters["screenSize"].SetValue(new Vector2(screenWidth, screenHeight));
+                Vector4[] lightSources_ = (from ls in lightSources select new Vector4(new Vector2(ls.Position.X, ls.Position.Y) - player.Position + ScreenCenter, ls.Strenght, ls.Max)).ToArray();
 
-                for (int i = 0; i < arr.Length; i++)
-                {
-                    arr[i] = i < liteSources.Length ? liteSources[i] : new Vector4(0);
-                }
-                smoothLightEffect.Parameters["liteSource"].SetValue(arr);
-                spriteBatch.Begin(SpriteSortMode.BackToFront, BlendState.Additive, SamplerState.PointClamp, DepthStencilState.Default, RasterizerState.CullNone, smoothLightEffect);
+                Texture2D lightMap = ConstructLightMap(lightSources_);
+                smoothLightMapperEffect.Parameters["screenSize"].SetValue(new Vector2(screenWidth, screenHeight));
+                smoothLightMapperEffect.Parameters["lightMap"].SetValue(lightMap);
+
+                spriteBatch.Begin(SpriteSortMode.BackToFront, BlendState.Additive, SamplerState.PointClamp, DepthStencilState.Default, RasterizerState.CullNone, smoothLightMapperEffect);
             }
             else
+            {
+                GraphicsDevice.SetRenderTarget(null);
                 spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.Additive, SamplerState.PointClamp, DepthStencilState.Default, RasterizerState.CullNone);
+            }
             GraphicsDevice.Clear(Color.Black);
             spriteBatch.Draw(gamePoleImg, Vector2.Zero, Color.White);
             spriteBatch.End();
@@ -796,6 +867,8 @@ namespace FGame
             result.Add(new LightSource() { Position = new Point((int)player.Position.X + playerTextureWidth / 2, (int)player.Position.Y + playerTextureHeight / 2), Strenght = player.LightStrength, Max = (int)(player.LightMax) });
             foreach (var fireball in fireballs)
                 result.Add(new LightSource() { Position = new Point(fireball.X, fireball.Y), Strenght = 10 * 32 });
+
+            result.AddRange(particleController.GetLightSources());
             //smt moar?
 
 

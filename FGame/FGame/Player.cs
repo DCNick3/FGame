@@ -7,7 +7,7 @@ namespace FGame
 {
     public class Player
     {
-        public Player()
+        public Player(Game1 game)
         {
             Buffs = new List<Buff>();
             Inventory = new ItemStack[40];
@@ -16,8 +16,10 @@ namespace FGame
             SkillUsePoint = 100;
             MaxSkillUsePoint = 100;
             SwordColor = Color.DarkGreen;
+            _game = game;
         }
 
+        private Game1 _game;
         private bool _canMove = true;
         private bool _isSwordCasted;
         private float _swordPos = 0;
@@ -82,7 +84,7 @@ namespace FGame
         {
             get
             {
-                return ((Type == 1 ? 8 : 6) + (Buffs.Where((Buff f) => f.Type == BuffType.Torch).Count() > 0 ? 5 : 0)) * 32;
+                return (int)((((Type == 1 ? 8 : 6) + (Buffs.Where((Buff f) => f.Type == BuffType.Torch).Count() > 0 ? 5 : 0)) * 32) * (Math.Sin((_game.gameTime.TotalGameTime.TotalMilliseconds) / 150) / 8f + 2f) * 0.5f);
             }
         }
         public float LightMax
@@ -153,6 +155,8 @@ namespace FGame
             {
                 lastSkillUses[skillN] = gameTime.TotalGameTime;
                 SkillUsePoint -= 10;
+                if (Type == 1)
+                    _game.particleController.PlayerWizardManaSparksManaCast(Position, 10);
                 return true;
             }
             else
@@ -160,6 +164,8 @@ namespace FGame
             {
                 lastSkillUses[skillN] = gameTime.TotalGameTime;
                 SkillUsePoint -= 20;
+                if (Type == 1)
+                    _game.particleController.PlayerWizardManaSparksManaCast(Position, 20);
                 return true;
             }
             else

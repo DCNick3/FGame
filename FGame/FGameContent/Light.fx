@@ -24,7 +24,7 @@ float4 main(float2 texCoord : TEXCOORD0) : COLOR0
 	{
 		if (liteSource[i].z <= 0)
 			break;
-		float nlght = 
+		float nlght =
 #ifdef USE_LIGHT_MULTIPLIER
 			liteSource[i].w *
 #endif
@@ -39,16 +39,24 @@ float4 main(float2 texCoord : TEXCOORD0) : COLOR0
 		}
 #endif
 	}
-	
+	//lght /= 32.0;
 	//if (lght < 0) lght = 0;
-	return tex2D(TextureSampler, texCoord) * float4(lght, lght, lght, lght);
+	float ll = tex2D(TextureSampler, texCoord).r;
+
+	float mx = 
+#ifdef USE_ADDITIVE_LIGHT
+		ll + lght;
+#else
+		ll > lght ? ll : lght;
+#endif
+	return float4(mx, mx, mx, 1);
 	// float4(1.0,1.0,0.5,0.5);
 }
 
 technique Technique1
 {
-    pass Pass1
-    {
-        PixelShader = compile ps_2_0 main();
-    }
+	pass Pass1
+	{
+		PixelShader = compile ps_2_0 main();
+	}
 }
