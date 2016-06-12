@@ -64,7 +64,7 @@ namespace FGame.ParticleSystem
             {
                 Vector2 velocity = AngleToV2((float)(Math.PI * 2d * random.NextDouble()), .2f);
                 float angle = 0;
-                float angleVel = (float)(Math.PI / 90);
+                float angleVel = (float)(Math.PI * 2d * random.NextDouble() / 45.0);
                 Vector4 color = new Vector4(0.5f, 0.5f, 1f, 0.5f);
                 float size = 3f;
                 int ttl = 240;
@@ -87,7 +87,7 @@ namespace FGame.ParticleSystem
             {
                 Vector2 velocity = AngleToV2((float)(Math.PI * 2d * random.NextDouble()), .2f);
                 float angle = 0;
-                float angleVel = (float)(Math.PI / 90);
+                float angleVel = (float)(Math.PI * random.NextDouble() / 45.0);
                 Vector4 color = new Vector4(0.5f, 0.5f, 1f, 0.5f);
                 float size = 3f;
                 int ttl = 240;
@@ -108,9 +108,9 @@ namespace FGame.ParticleSystem
         {
             for (int a = 0; a < 40; a++)
             {
-                Vector2 velocity = AngleToV2((float)(Math.PI * 2d * random.NextDouble()), .2f);
+                Vector2 velocity = AngleToV2((float)(Math.PI * 2d * random.NextDouble()), (float)random.NextDouble() / 5);
                 float angle = 0;
-                float angleVel = (float)(Math.PI / 20);
+                float angleVel = (float)(Math.PI * 2d * random.NextDouble() / 45.0);
                 Vector4 color = new Vector4(1.0f, 0.5f, 0.5f, 0.5f);
                 float size = 2f;
                 int ttl = 80;
@@ -178,7 +178,7 @@ namespace FGame.ParticleSystem
                 var particle = particles[i];
                 if (particle.IsLighting)
                 {
-                    result.Add(new LightSource() {Max = particle.LightMax, Position = new Point((int)particle.Position.X + 19, (int)particle.Position.Y + 19), Strenght = (int)particle.LightStrength });
+                    result.Add(new LightSource() {Max = particle.LightMax, Position = new Point((int)particle.Position.X, (int)particle.Position.Y), Strenght = (int)particle.LightStrength });
                 }
             }
             return result.ToArray();

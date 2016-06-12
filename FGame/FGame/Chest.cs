@@ -10,7 +10,9 @@ namespace FGame
     public class Chest //: GameObject 
     {
         public Chest(Game1 game) //: base(game) 
-        { }
+        {
+            Inventory = new ItemStack[] { new ItemStack(Items.goldCoin, 2) };
+        }
 
         public void OpenStart(Player player)
         {
@@ -20,6 +22,9 @@ namespace FGame
 
         public void OpenEnd(Player player)
         {
+            for (int i = 0; i < Inventory.Length; i++)
+                player.AddItem(Inventory[i]);
+            Inventory = new ItemStack[0];
             //TODO: Move inventory!
         }
 
@@ -29,6 +34,7 @@ namespace FGame
         public int AnimationFrame { get; set; }
         public Point Position { get; set; }
         public Point ChunkPosition { get; set; }
+        public ItemStack[] Inventory { get; set; }
         public Point GlobPosition
         {
             get

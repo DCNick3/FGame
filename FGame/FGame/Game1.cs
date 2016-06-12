@@ -620,7 +620,7 @@ namespace FGame
                     {
                         fireball.X = (int)newPos.X;
                         fireball.Y = (int)newPos.Y;
-                        particleController.FireballFlySparks(newPos);
+                        particleController.FireballFlySparks(newPos + new Vector2(0, 5));
                     }
                     else
                     {
@@ -703,9 +703,9 @@ namespace FGame
             //smoothLightEffect.Parameters["screenSize"].SetValue(new Vector2(screenWidth, screenHeight));
             //smoothLightEffect.Parameters["liteSource"].SetValue(new Vector4[] { new Vector4(ScreenCenter + new Vector2(playerTextureWidth, playerTextureHeight) * 0.5f, 1.0f, (player.Type == 1 ? 8 : 6) * 32f) });
 
-            spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.NonPremultiplied, SamplerState.PointClamp, DepthStencilState.Default, RasterizerState.CullNone/*, smoothLightEffect*/);
 
             DrawTiles(lightSources);
+            spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.NonPremultiplied, SamplerState.PointClamp, DepthStencilState.Default, RasterizerState.CullNone);
             DrawChests(lightSources);
             DrawFireballs();
             DrawSword(ScreenCenter + new Vector2(playerTextureWidth, playerTextureHeight) / 2f, player.SwordDirection, player.GetSwordLength(gameTime), player.SwordColor);
@@ -891,6 +891,7 @@ namespace FGame
         private void DrawTiles(LightSource[] lightSources)
         {
             //Optimize~
+            spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.NonPremultiplied, SamplerState.PointClamp, DepthStencilState.Default, RasterizerState.CullNone);
             int mX = (int)Math.Floor((player.Position.X - screenWidth) / tileWidth);
             int mY = (int)Math.Floor((player.Position.Y- screenHeight) / tileHeight);
             if (mX < gamePole.MinX)
@@ -914,6 +915,7 @@ namespace FGame
                         spriteBatch.Draw(tileTexture, ScreenCenter - player.Position + new Vector2(x * tileWidth, y * tileHeight), GetTilePos(t.Id), Color.White * lightness);
                     }
                 }
+            spriteBatch.End();
         }
 
         private Rectangle GetTilePos(int n)
