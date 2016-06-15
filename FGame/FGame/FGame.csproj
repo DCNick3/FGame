@@ -75,9 +75,12 @@
     <Compile Include="Buff.cs" />
     <Compile Include="Chest.cs" />
     <Compile Include="Chunk.cs" />
+    <Compile Include="Extensions.cs" />
     <Compile Include="Fireball.cs" />
     <Compile Include="GameObject.cs" />
     <Compile Include="GamePole.cs" />
+    <Compile Include="GamePoleStaticObject.cs" />
+    <Compile Include="GameRegistry.cs" />
     <Compile Include="Hint.cs" />
     <Compile Include="Item.cs" />
     <Compile Include="LightSource.cs" />

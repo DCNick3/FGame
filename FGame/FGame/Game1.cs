@@ -74,6 +74,7 @@ namespace FGame
         TimeSpan lastFireballSpawn = new TimeSpan(0);
         TimeSpan chestAnimationSpeed = TimeSpan.FromSeconds(0.2);
         TimeSpan lastChestAnimation = new TimeSpan(0);
+        GameRegistry gameRegistry;
         internal ParticleController particleController;
         internal GameTime gameTime;
 
@@ -107,6 +108,7 @@ namespace FGame
             player.AddItem(new ItemStack(Items.torch, 12));
             RegenPole();
             particleController = new ParticleController();
+            gameRegistry = new GameRegistry();
         }
 
         /// <summary>
@@ -151,6 +153,9 @@ namespace FGame
             whitePixel = new Texture2D(GraphicsDevice, 1, 1);
             whitePixel.SetData(new Color[] { Color.White });
             particleController.LoadContent(Content);
+
+            gameRegistry.SetTexture("tiles", tileTexture);
+            gameRegistry.SetTexture("whitePixel", whitePixel);
         }
 
         /// <summary>

@@ -107,8 +107,7 @@ namespace FGame
 
             while (openList.Count > 0)
             {
-                AStarNode currentNode = null; //= openList.OrderBy(node =>
-                                              //node.EstimateFullPathLength).First();
+                AStarNode currentNode = null; 
                 int smallestPL = int.MaxValue;
 
                 for (int i = 0; i < openList.Count; i++)
@@ -137,8 +136,6 @@ namespace FGame
                     cont:
                     continue;
                     nc:
-                    //if (closedList.Count(node => node.Position == neighbourNode.Position) > 0) //TODO: optimize!!!
-                    //  continue;
                     bool f = false;
                     AStarNode openNode = null;
                     for (int i = 0; i < openList.Count; i++)
@@ -151,11 +148,6 @@ namespace FGame
                     }
                     if (!f)
                         openList.Add(neighbourNode);
-                    //var openNode = openList.FirstOrDefault(node =>
-                    //  node.Position == neighbourNode.Position);
-
-                    //if (openNode == null)
-                    //    openList.Add(neighbourNode);
 
                     if (f && openNode.PathLengthFromStart > neighbourNode.PathLengthFromStart)
                     {
@@ -202,7 +194,6 @@ namespace FGame
                     List<Room> inter = rooms.FindAll(
                         (Room room_) =>
                         {
-                            //return ((room.X < room_.X && room.X > room_.X + room_.Width) && (room.X + room.Width < room_.X && room.X + room.Width > room_.X + room_.Width) && (room.Y < room_.Y && room.Y > room_.Y + room_.Height) && (room.Y + room.Height < room_.Y && room.Y + room.Height > room_.Y + room_.Height));
                             return roomRect.Intersects(room_.Position);
                         });
                     if (inter.Count == 0)
@@ -358,5 +349,7 @@ namespace FGame
         {
             return Rooms[rnd.Next(Rooms.Length)];
         }
+
+
     }
 }
