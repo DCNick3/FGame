@@ -16,5 +16,9 @@ namespace FGame
         {
             return new Vector2(pnt.X, pnt.Y);
         }
+        public static FloatRectangle ToFloatRect(this Rectangle rect)
+        {
+            return new FloatRectangle(rect.X, rect.Y, rect.Width, rect.Height);
+        }
     }
 }

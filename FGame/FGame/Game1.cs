@@ -155,6 +155,7 @@ namespace FGame
             particleController.LoadContent(Content);
 
             gameRegistry.SetTexture("tiles", tileTexture);
+            gameRegistry.SetTexture("chest", chestTexture);
             gameRegistry.SetTexture("whitePixel", whitePixel);
         }
 
@@ -266,8 +267,8 @@ namespace FGame
             }
 
             Rectangle playerRect = new Rectangle((int)player.Position.X, (int)player.Position.Y, playerTextureWidth, playerTextureHeight);
-            if (KeyPress(Keys.E))
-                foreach (var chest in gamePole.Chests)
+            if (KeyPress(Keys.E)) { }
+                /*foreach (var chest in gamePole.Chests)
                 {
                     Rectangle chestRect = new Rectangle(chest.GlobPosition.X * chestWidth, chest.GlobPosition.Y * chestHeight, chestWidth, chestHeight);
                     if (chestRect.Intersects(playerRect) && !chest.IsOpen)
@@ -275,9 +276,9 @@ namespace FGame
                         chest.OpenStart(player);
                         break;
                     }
-                }
+                }*/
 
-            if (gameTime.TotalGameTime - lastChestAnimation > chestAnimationSpeed)
+            /*if (gameTime.TotalGameTime - lastChestAnimation > chestAnimationSpeed)
             {
                 foreach (var chest in gamePole.Chests)
                 {
@@ -291,7 +292,7 @@ namespace FGame
                     }
                 }
                 lastChestAnimation = gameTime.TotalGameTime;
-            }
+            }*/
 
             for (int i = 0; i < player.Buffs.Count; i++)
             {
@@ -534,7 +535,6 @@ namespace FGame
         private Point[] GetCollidingTiles(Rectangle rect)
         {
             //TODO: optimize!~
-            //TODO: Negative coord bug
             List<Point> result = new List<Point>();
             for (int x = gamePole.MinX; x < gamePole.MaxX; x++)
                 for (int y = gamePole.MinY; y < gamePole.MaxY; y++)
@@ -569,7 +569,7 @@ namespace FGame
             Rectangle pr = new Rectangle((int)newPos.X + 4, (int)newPos.Y + 4, playerTextureWidth - 8, playerTextureHeight - 4);
             bool canMove = true;
             foreach (var coll in GetCollidingTiles(pr))
-                canMove &= !gamePole.GetTileAt(new Point(coll.X, coll.Y)).IsObstacle;
+                canMove &= gamePole.IsFree(coll);
             if (canMove)
                 player.Position = newPos;
         }
@@ -620,7 +620,7 @@ namespace FGame
                     Rectangle pr = new Rectangle((int)newPos.X + 4, (int)newPos.Y + 4, 32 - 8, 32 - 8);
                     bool canMove = true;
                     foreach (var coll in GetCollidingTiles(pr))
-                        canMove &= !gamePole.GetTileAt(new Point(coll.X, coll.Y)).IsObstacle;
+                        canMove &= gamePole.IsFree(coll);
                     if (canMove)
                     {
                         fireball.X = (int)newPos.X;
@@ -709,9 +709,10 @@ namespace FGame
             //smoothLightEffect.Parameters["liteSource"].SetValue(new Vector4[] { new Vector4(ScreenCenter + new Vector2(playerTextureWidth, playerTextureHeight) * 0.5f, 1.0f, (player.Type == 1 ? 8 : 6) * 32f) });
 
 
-            DrawTiles(lightSources);
+            //DrawTiles(lightSources);
             spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.NonPremultiplied, SamplerState.PointClamp, DepthStencilState.Default, RasterizerState.CullNone);
-            DrawChests(lightSources);
+            gamePole.Draw(gameRegistry, spriteBatch, player.Position - ScreenCenter + new Vector2(playerTextureWidth, playerTextureHeight) / 2);
+            //DrawChests(lightSources);
             DrawFireballs();
             DrawSword(ScreenCenter + new Vector2(playerTextureWidth, playerTextureHeight) / 2f, player.SwordDirection, player.GetSwordLength(gameTime), player.SwordColor);
 
@@ -835,7 +836,7 @@ namespace FGame
             return 1f;
         }
 
-        private void DrawChests(LightSource[] lightSources)
+        /*private void DrawChests(LightSource[] lightSources)
         {
             foreach (var chunk in gamePole.chunks)
             {
@@ -852,7 +853,7 @@ namespace FGame
                         }
                     }
             }
-        }
+        }*/
 
         private void DrawFireballs()
         {
@@ -893,7 +894,7 @@ namespace FGame
                 , new Rectangle(playerTextureWidth * playerRunStep + (int)plOffset.X, playerTextureHeight * player.RunDirection + (int)plOffset.Y, playerTextureWidth, playerTextureHeight), player.Buffs.Where((Buff b) => b.Type == BuffType.Poison).Count() > 0 ? Color.LawnGreen : Color.White);  
         }
 
-        private void DrawTiles(LightSource[] lightSources)
+        /*private void DrawTiles(LightSource[] lightSources)
         {
             //Optimize~
             spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.NonPremultiplied, SamplerState.PointClamp, DepthStencilState.Default, RasterizerState.CullNone);
@@ -911,7 +912,7 @@ namespace FGame
                     Vector2 pps = (new Vector2(x, y) * tileWidth - player.Position) / 2;
                     pps = new Vector2(Math.Abs(pps.X), Math.Abs(pps.Y));
                     Tile t = gamePole.GetTileAt(new Point(x, y));
-                    if (t != null && t.Id != 0 /*&& pps.X < screenWidth && pps.Y < screenHeight*/)
+                    if (t != null && t.Id != 0)
                     {
                         Point center = new Point(x * tileWidth + tileWidth / 2, y * tileHeight + tileHeight / 2);
                         float lightness = GetLightLevel(center, lightSources);
@@ -921,7 +922,7 @@ namespace FGame
                     }
                 }
             spriteBatch.End();
-        }
+        }*/
 
         private Rectangle GetTilePos(int n)
         {

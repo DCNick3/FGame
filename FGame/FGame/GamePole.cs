@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
@@ -10,7 +11,6 @@ namespace FGame
 
     public class GamePole
     {
-        //TODO: split gamePole to chunks!
         private class AStarNode
         {  
             public Point Position { get; set; }
@@ -38,9 +38,9 @@ namespace FGame
 
             foreach (var point in neighbourPoints)
             {
-                if (GetTileAt(point) == null)
-                    continue;
-                if (GetTileAt(point).IsObstacle && wallWeight == -1)
+                //if (GetTileAt(point) == null)
+                //    continue;
+                if (!IsFree(point) && wallWeight == -1)
                     continue;
 
 
@@ -64,7 +64,7 @@ namespace FGame
 
         private int GetDistanceBetweenNeighbours(Point one, Point two, int nullWeight, int wallWeight)
         {
-            return ((GetTileAt(new Point(one.X, one.Y)).IsObstacle) ? wallWeight : nullWeight) + ((GetTileAt(new Point(two.X, two.Y)).IsObstacle) ? wallWeight : nullWeight);
+            return ((!IsFree(one)) ? wallWeight : nullWeight) + ((!IsFree(two)) ? wallWeight : nullWeight);
         }
 
         private static List<Point> GetPathForNode(AStarNode pathNode)
@@ -175,7 +175,7 @@ namespace FGame
 
         internal Chunk[,] chunks;
 
-        public Chest[] Chests
+        /*public Chest[] Chests
         {
             get
             {
@@ -195,7 +195,7 @@ namespace FGame
                     }
                 return chsts.ToArray();
             }
-        }
+        }*/
         public Room[] Rooms
         {
             get
@@ -213,7 +213,7 @@ namespace FGame
         /// This is a stub!
         /// U better to use GetChunkAt(pos)
         /// </summary>
-        public Tile[,] Tiles
+        /*public Tile[,] Tiles
         {
             get
             {
@@ -231,9 +231,9 @@ namespace FGame
                     }
                 return res;
             }
-        }
+        }*/
 
-        public Tile GetTileAt(Point pos)
+        /*public Tile GetTileAt(Point pos)
         {
             int xx = pos.X % Chunk.width;
             int x = (int)Math.Floor((float)pos.X / Chunk.width);
@@ -245,9 +245,9 @@ namespace FGame
                 return chunks[x - TileCoordinateOffsetX, y - TileCoordinateOffsetY].Tiles[xx, yy];
             else
                 return null;
-        }
+        }*/
 
-        public bool SetTileAt(Point pos, Tile tile)
+        /*public bool SetTileAt(Point pos, Tile tile)
         {
             int xx = pos.X % Chunk.width;
             int x = (int)Math.Floor((float)pos.X / Chunk.width);
@@ -261,7 +261,7 @@ namespace FGame
                 return true;
             }
             return false;
-        }
+        }*/
 
         //public GameObject[] GameObjects { get; private set; }
 
@@ -328,8 +328,8 @@ namespace FGame
 
             foreach (var point_ in points)
             {
-                if (GetTileAt(point_) == null)
-                    continue;
+                //if (GetTileAt(point_) == null)
+                //    continue;
 
                 result.Add(point_);
             }
@@ -344,8 +344,8 @@ namespace FGame
             do
             {
                 res = new Point(rnd.Next(MinX, MaxX), rnd.Next(MinY, MaxY));
-                Tile t = GetTileAt(new Point(res.X, res.Y));
-                isFree = t != null && !t.IsObstacle;
+                //Tile t = //GetTileAt(new Point(res.X, res.Y));
+                isFree = IsFree(res);
             }
             while (!isFree);
             return res;
@@ -509,31 +509,124 @@ namespace FGame
 
             foreach (var p in pp)
             {
-                if (GetTileAt(p).IsObstacle)
+                if (!IsFree(p))
                 {
                     int ft;
                     if (GetDistance(p, gp1) > GetDistance(p, gp2))
                     {
-                        ft = GetTileAt(gp2).Id;
+                        ft = c2.FloorType;// GetTileAt(gp2).Id;
                     }
                     else
                     {
-                        ft = GetTileAt(gp1).Id;
+                        ft = c1.FloorType;// GetTileAt(gp1).Id;
                     }
-                    SetTileAt(p, new Tile(ft, false));
+                    DeleteObjectsAtPoint(p.ToVector2());
+                    AddTile(p.ToVector2(), ft, false, 0);
                 }
             }
 
             for (int x = MinX; x < MaxX; x++)
                 for (int y = MinY; y < MaxY; y++)
                 {
-                    Tile t = GetTileAt(new Point(x, y));
+                    GamePoleObjectTile[] t = GetTileIntersectsPoint(new Vector2(x, y));
                     
-                    if (t != null && t.IsObstacle && GetNeighbours(new Point(x, y)).Where((Point p) => !GetTileAt(p).IsObstacle).Count() != 0)
+                    if (!IsFree(new Point(x,y)) && GetNeighbours(new Point(x, y)).Where((Point p) => IsFree(p)).Count() != 0)
                     {
-                        t.Id = 53;
+                        DeleteObjectsAtPoint(new Point(x,y).ToVector2());
+                        AddTile(new Point(x, y).ToVector2(), 53, false, 0);
                     }
                 }
+        }
+
+        public bool IsFree(Point p)
+        {
+            return true;
+            return GetTileIntersectsPoint(p.ToVector2()).Where((GamePoleObjectTile x) => x.IsObstacle).Count() == 0;
+        }
+
+        public bool IsFree(Vector2 p)
+        {
+            return GetTileIntersectsPoint(p).Where((GamePoleObjectTile x) => x.IsObstacle).Count() == 0;
+        }
+
+        public void AddStaticObject(GamePoleStaticObject obj)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void AddTile(Vector2 position, int type, bool isObstacle, int layer)
+        {
+            AddStaticObject(new GamePoleObjectTile(position, type, isObstacle, layer));
+        }
+
+        public GamePoleStaticObject[] GetObjectsIntersectsPoint(Vector2 point)
+        {
+            //float xx = point.X % Chunk.width;
+            int x = (int)Math.Floor((float)point.X / Chunk.width);
+            //float yy = point.Y % Chunk.height;
+            int y = (int)Math.Floor((float)point.Y / Chunk.height);
+            //if (xx < 0) xx = Chunk.width + xx;
+            //if (yy < 0) yy = Chunk.height + yy;
+            return chunks[x - TileCoordinateOffsetX, y - TileCoordinateOffsetY] != null ? chunks[x - TileCoordinateOffsetX, y - TileCoordinateOffsetY].GetObjectsIntersectsPoint(point) : new GamePoleStaticObject[] { };
+        }
+
+        public GamePoleStaticObject[] GetObjectsInRect(Rectangle rect)
+        {
+            throw new NotImplementedException();
+        }
+
+        public GamePoleStaticObject[] GetObjectsIntersectsRect(Rectangle rect)
+        {
+            throw new NotImplementedException();
+        }
+
+        public GamePoleObjectTile[] GetTileIntersectsPoint(Vector2 point)
+        {
+            return (from x in GetObjectsIntersectsPoint(point) select x as GamePoleObjectTile).Where((GamePoleObjectTile x) => x != null).ToArray();
+        }
+
+        public void DeleteObject(GamePoleStaticObject obj)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void DeleteObjects(GamePoleStaticObject[] obj)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void DeleteObjectsAtPoint(Vector2 point)
+        {
+            DeleteObjects(GetObjectsIntersectsPoint(point));
+        }
+
+        public void Draw(GameRegistry registry, SpriteBatch spriteBatch, Vector2 screenPos)
+        {
+            for (int x = 0; x < chunks.GetLength(0); x++)
+            {
+                for (int y = 0; y < chunks.GetLength(1); y++)
+                {
+                    var oo = chunks[x, y].Objects;
+                    for (int i = 0; i < oo.Count; i++)
+                    {
+                        oo[i].Draw(registry, spriteBatch, screenPos);
+                    }
+                }
+            }
+        }
+        public virtual void Update(GameRegistry registry, GameTime gameTime)
+        {
+            for (int x = 0; x < chunks.GetLength(0); x++)
+            {
+                for (int y = 0; y < chunks.GetLength(1); y++)
+                {
+                    var oo = chunks[x, y].Objects;
+                    for (int i = 0; i < oo.Count; i++)
+                    {
+                        oo[i].Update(registry, gameTime);
+                    }
+                }
+            }
         }
     }
 }

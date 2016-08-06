@@ -13,13 +13,13 @@ namespace FGame
         {
             gamePole = gp;
             game = gm;
-            Tiles = new Tile[width, height];
-            for (int x = 0; x < width; x++)
-                for (int y = 0; y < height; y++)
-                    Tiles[x, y] = new Tile(0, true);
+            //Tiles = new Tile[width, height];
+            //for (int x = 0; x < width; x++)
+            //    for (int y = 0; y < height; y++)
+            //        Tiles[x, y] = new Tile(0, true);
+            objects = new List<GamePoleStaticObject>();
         }
-
-        //TODO: split gamePole to chunks!
+        
         private class AStarNode
         {
             public Point Position { get; set; }
@@ -47,11 +47,11 @@ namespace FGame
 
             foreach (var point in neighbourPoints)
             {
-                if (point.X < 0 || point.X >= Tiles.GetLength(0))
-                    continue;
-                if (point.Y < 0 || point.Y >= Tiles.GetLength(1))
-                    continue;
-                if (Tiles[point.X, point.Y].IsObstacle && wallWeight == -1)
+                //if (point.X < 0 || point.X >= Tiles.GetLength(0))
+                //    continue;
+                //if (point.Y < 0 || point.Y >= Tiles.GetLength(1))
+                //    continue;
+                if (!IsFree(point) && wallWeight == -1)
                     continue;
 
 
@@ -75,7 +75,7 @@ namespace FGame
 
         private int GetDistanceBetweenNeighbours(Point one, Point two, int nullWeight, int wallWeight)
         {
-            return ((Tiles[one.X, one.Y].IsObstacle) ? wallWeight : nullWeight) + ((Tiles[two.X, two.Y].IsObstacle) ? wallWeight : nullWeight);
+            return ((!IsFree(one)) ? wallWeight : nullWeight) + ((!IsFree(two)) ? wallWeight : nullWeight);
         }
 
         private static List<Point> GetPathForNode(AStarNode pathNode)
@@ -159,22 +159,27 @@ namespace FGame
             return null;
         }
 
-        public const int width = 64;
-        public const int height = 64;
-        public Chest[] Chests { get; private set; }
+        public const int width = 16;
+        public const int height = 16;
+        //public Chest[] Chests { get; private set; }
         public Room[] Rooms { get; private set; }
-        public Tile[,] Tiles { get; private set; }
+        //public Tile[,] Tiles { get; private set; }
+        List<GamePoleStaticObject> objects;
+        public int FloorType { get; private set; }
 
         Game1 game;
         GamePole gamePole;
+        public List<GamePoleStaticObject> Objects { get { return objects; } }
 
         public static Chunk Generate(GamePole gp, Game1 game, Random rnd)
         {
             List<Room> rooms = new List<Room>();
             Chunk ck = new Chunk(gp, game);
-            int floorType = rnd.Next(35, 39);
+            ck.FloorType = rnd.Next(35, 39);
 
-            int roomCount = 30;
+            Vector2 tileSize = new Vector2(32, 32);
+
+            int roomCount = 4;
             int wallCost = 30;
 
             for (int i = 0; i < roomCount; i++)
@@ -203,7 +208,7 @@ namespace FGame
                         ck.Rooms = rooms.ToArray();
                         for (int x = 0; x < room.Position.Width; x++)
                             for (int y = 0; y < room.Position.Height; y++)
-                                ck.Tiles[room.Position.X + x, room.Position.Y + y] = new Tile(floorType, false);
+                                ck.AddTile(new Vector2(room.Position.X + x, room.Position.Y + y) * tileSize , ck.FloorType, false, 0);
 
                         //Connect
                         int cn = 2 + rnd.Next(2);
@@ -219,7 +224,7 @@ namespace FGame
                             Point[] pp = ck.AStarGetWay(1, wallCost, room.Center, t.Center);
                             for (int x = 0; x < pp.Length; x++)
                             {
-                                ck.Tiles[pp[x].X, pp[x].Y] = new Tile(floorType, false);
+                                ck.AddTile(pp[x].ToVector2() * tileSize, ck.FloorType, false, 0);
                             }
                             if (t != room)
                                 room.ConnectsTo.Add(t);
@@ -246,7 +251,7 @@ namespace FGame
                     Point[] pp = ck.AStarGetWay(1, wallCost, room.Center, t.Center);
                     for (int x = 0; x < pp.Length; x++)
                     {
-                        ck.Tiles[pp[x].X, pp[x].Y] = new Tile(floorType, false);
+                        ck.AddTile(pp[x].ToVector2() * tileSize, ck.FloorType, false, 0);
                     }
                     room.ConnectsTo.Add(t);
                 }
@@ -259,7 +264,7 @@ namespace FGame
                 Point[] pp = ck.AStarGetWay(1, wallCost, room.Center, t.Center);
                 for (int x = 0; x < pp.Length; x++)
                 {
-                    ck.Tiles[pp[x].X, pp[x].Y] = new Tile(floorType, false);
+                    ck.AddTile(pp[x].ToVector2() * tileSize, ck.FloorType, false, 0);
                 }
                 if (t != room)
                     room.ConnectsTo.Add(t);
@@ -268,7 +273,7 @@ namespace FGame
             //54
 
             int chestCount = roomCount / 3;
-            List<Chest> chsts = new List<Chest>();
+            List<GamePoleObjectChest> chsts = new List<GamePoleObjectChest>();
 
             for (int i = 0; i < chestCount; i++)
             {
@@ -277,24 +282,21 @@ namespace FGame
                     Point p = ck.GetRandomFreePole(rnd);
                     Room r = ck.GetRoomAt(p);
                     if (r == null || r.Chest != null) continue;
-                    Chest c = new Chest(ck.game);
-                    c.Position = p;
-                    c.Type = rnd.Next(4);
+                    GamePoleObjectChest c = new GamePoleObjectChest(p.ToVector2() * tileSize, 11, rnd.Next(4));
                     chsts.Add(c);
-                    r.Chest = c;
                     break;
                 }
             }
 
-            chsts.Sort((Chest a, Chest b) => a.Position.Y.CompareTo(b.Position.Y));
-            ck.Chests = chsts.ToArray();
+            chsts.Sort((GamePoleObjectChest a, GamePoleObjectChest b) => a.Position.Y.CompareTo(b.Position.Y));
+            ck.objects.AddRange(chsts);
 
 
             for (int x = 0; x < width; x++)
                 for (int y = 0; y < height; y++)
-                    if (ck.Tiles[x, y].IsObstacle && ck.GetNeighbours(new Point(x, y)).Where((Point p) => !ck.Tiles[p.X, p.Y].IsObstacle).Count() != 0)
+                    if (!ck.IsFree(new Point(x,y)) && ck.GetNeighbours(new Point(x, y)).Where((Point p) => ck.IsFree(p)).Count() != 0)
                     {
-                        ck.Tiles[x, y].Id = 53;
+                        foreach (var xx in ck.GetTileIntersectsPoint(new Vector2(x, y))) xx.Type = 53;
                     }
             return ck;
         }
@@ -334,7 +336,7 @@ namespace FGame
             do
             {
                 res = new Point(rnd.Next(0, width), rnd.Next(0, height));
-                isFree = !Tiles[res.X, res.Y].IsObstacle;
+                isFree = IsFree(res);// !Tiles[res.X, res.Y].IsObstacle;
             }
             while (!isFree);
             return res;
@@ -350,6 +352,60 @@ namespace FGame
             return Rooms[rnd.Next(Rooms.Length)];
         }
 
+        public bool IsFree(Point p)
+        {
+            return true;
+            return GetTileIntersectsPoint(p.ToVector2()).Where((GamePoleObjectTile x) => x.IsObstacle).Count() == 0;
+        }
 
+        public bool IsFree(Vector2 p)
+        {
+            return GetTileIntersectsPoint(p).Where((GamePoleObjectTile x) => x.IsObstacle).Count() == 0;
+        }
+
+        public void AddStaticObject(GamePoleStaticObject obj)
+        {
+            objects.Add(obj);
+        }
+
+        public void AddTile(Vector2 position, int type, bool isObstacle, int layer)
+        {
+            AddStaticObject(new GamePoleObjectTile(position, type, isObstacle, layer));
+        }
+
+        public GamePoleStaticObject[] GetObjectsIntersectsPoint(Vector2 point)
+        {
+            return objects.Where((GamePoleStaticObject x) => x.Rectangle.Intersects(point)).ToArray();
+        }
+
+        public GamePoleStaticObject[] GetObjectsInRect(FloatRectangle rect)
+        {
+            return objects.Where((GamePoleStaticObject x) => x.Rectangle.IsInside(rect)).ToArray();
+        }
+
+        public GamePoleStaticObject[] GetObjectsIntersectsRect(FloatRectangle rect)
+        {
+            return objects.Where((GamePoleStaticObject x) => x.Rectangle.Intersects(rect)).ToArray();
+        }
+
+        public GamePoleObjectTile[] GetTileIntersectsPoint(Vector2 point)
+        {
+            return (from x in GetObjectsIntersectsPoint(point) select x as GamePoleObjectTile).Where((GamePoleObjectTile x) => x != null).ToArray();
+        }
+
+        public void DeleteObject(GamePoleStaticObject obj)
+        {
+            objects.Remove(obj);
+        }
+
+        public void DeleteObjects(GamePoleStaticObject[] obj)
+        {
+            objects.RemoveAll((GamePoleStaticObject x) => obj.Contains(x));
+        }
+
+        public void DeleteObjectsAtPoint(Vector2 point)
+        {
+            DeleteObjects(GetObjectsIntersectsPoint(point));
+        }
     }
 }

@@ -9,33 +9,51 @@ namespace FGame
 {
     public abstract class GamePoleStaticObject
     {
-        public abstract Point Position { get; }
-        public abstract Point Size { get; }
+        public abstract Vector2 Position { get; }
+        public abstract Vector2 Size { get; }
         public abstract bool IsObstacle { get; }
-        public Rectangle Rectangle { get { return new Rectangle(Position.X, Position.Y, Size.X, Size.Y); } }
+        public FloatRectangle Rectangle { get { return new FloatRectangle(Position.X, Position.Y, Size.X, Size.Y); } }
         public virtual void Draw(GameRegistry registry, SpriteBatch spriteBatch, Vector2 screenPos) { }
         public virtual void Update(GameRegistry registry, GameTime gameTime) { }
+        public int Layer { get; protected set; }
+        /* Layers:
+         * 0 to 5   - tiles
+         * 6 to 10  - tile effects
+         * 11 to 15 - chests, tables etc
+         * */
     }
 
     public class GamePoleObjectTile : GamePoleStaticObject
     {
-        public GamePoleObjectTile(Point position, int type, bool isObstacle)
+        public GamePoleObjectTile(Vector2 position, int type, bool isObstacle, int layer)
         {
             _isObstacle = isObstacle;
             _position = position;
             _type = type;
+            Layer = layer;
         }
 
         private const int _width = 32;
         private const int _height = 32;
         private bool _isObstacle;
         private int _type;
-        private Point _position;
+        private Vector2 _position;
         public override bool IsObstacle
         {
             get
             {
                 return _isObstacle;
+            }
+        }
+        public int Type
+        {
+            get
+            {
+                return _type;
+            }
+            set
+            {
+                _type = value;
             }
         }
 
@@ -47,7 +65,7 @@ namespace FGame
             return new Rectangle(x * _width, y * _height, _width, _height);
         }
 
-        public override Point Position
+        public override Vector2 Position
         {
             get
             {
@@ -55,11 +73,11 @@ namespace FGame
             }
         }
 
-        public override Point Size
+        public override Vector2 Size
         {
             get
             {
-                return new Point(_width, _height);
+                return new Vector2(_width, _height);
             }
         }
 
@@ -67,19 +85,21 @@ namespace FGame
         {
             Texture2D tiles = registry.GetTexture("tiles");
             Rectangle src = GetSourceRect();
-            Vector2 pos = Position.ToVector2() - screenPos;
+            Vector2 pos = Position - screenPos;
             Color color = _isObstacle ? Color.White * 0.75f : Color.White;
-            spriteBatch.Draw(tiles, pos, src, color);
+            Vector2 origin = Size / 2f;
+            spriteBatch.Draw(tiles, pos, src, color, 0f, origin, 1f, SpriteEffects.None, 0);
         }
     }
 
     public class GamePoleObjectChest : GamePoleStaticObject
     {
-        public GamePoleObjectChest(Point position)
+        public GamePoleObjectChest(Vector2 position, int layer, int type)
         {
             _position = position;
+            Layer = layer;
         }
-        private Point _position;
+        private Vector2 _position;
         private const int _width = 32;
         private const int _height = 32;
         public override bool IsObstacle
@@ -90,7 +110,7 @@ namespace FGame
             }
         }
 
-        public override Point Position
+        public override Vector2 Position
         {
             get
             {
@@ -98,11 +118,11 @@ namespace FGame
             }
         }
 
-        public override Point Size
+        public override Vector2 Size
         {
             get
             {
-                return new Point(_width, _height);
+                return new Vector2(_width, _height);
             }
         }
 
@@ -118,10 +138,9 @@ namespace FGame
         {
             Texture2D chest = registry.GetTexture("chest");
             Rectangle src = GetSourceRect();
-            Vector2 pos = Position.ToVector2() - screenPos;
-            //Vector2 pos = ScreenCenter - player.Position + new Vector2(chest.GlobPosition.X * _width, chest.GlobPosition.Y * _height - 16);
-            Point center = new Point(Position.X * _width + _width / 2, Position.Y * _height + _height / 2 - 16);
-            spriteBatch.Draw(chest, pos, src, Color.White);
+            Vector2 pos = Position - screenPos;
+            Vector2 origin = Size / 2f;
+            spriteBatch.Draw(chest, pos, src, Color.White, 0f, origin, 1f, SpriteEffects.None, 0);
         }
     }
 }

@@ -25,10 +25,8 @@ namespace FGame
             for (int i = 0; i < Inventory.Length; i++)
                 player.AddItem(Inventory[i]);
             Inventory = new ItemStack[0];
-            //TODO: Move inventory!
         }
-
-        //TODO: Add inventory!
+        
         public int Type { get; set; }
         public bool IsOpen { get; set; }
         public int AnimationFrame { get; set; }
