@@ -7,9 +7,22 @@ using System.Text;
 
 namespace FGame
 {
-    public abstract class GamePoleStaticObject
+    public abstract class GamePoleObject
     {
-        public abstract Vector2 Position { get; }
+        private Vector2 _pos;
+        public Vector2 Position
+        {
+            get
+            {
+                return _pos;
+            }
+            set
+            {
+                _pos = value;
+                Moved = true;
+            }
+        }
+        internal bool Moved { private set; get; }
         public abstract Vector2 Size { get; }
         public abstract bool IsObstacle { get; }
         public FloatRectangle Rectangle { get { return new FloatRectangle(Position.X, Position.Y, Size.X, Size.Y); } }
@@ -23,12 +36,12 @@ namespace FGame
          * */
     }
 
-    public class GamePoleObjectTile : GamePoleStaticObject
+    public class GamePoleObjectTile : GamePoleObject
     {
         public GamePoleObjectTile(Vector2 position, int type, bool isObstacle, int layer)
         {
             _isObstacle = isObstacle;
-            _position = position;
+            Position = position;
             _type = type;
             Layer = layer;
         }
@@ -37,7 +50,6 @@ namespace FGame
         private const int _height = 32;
         private bool _isObstacle;
         private int _type;
-        private Vector2 _position;
         public override bool IsObstacle
         {
             get
@@ -65,14 +77,6 @@ namespace FGame
             return new Rectangle(x * _width, y * _height, _width, _height);
         }
 
-        public override Vector2 Position
-        {
-            get
-            {
-                return _position;
-            }
-        }
-
         public override Vector2 Size
         {
             get
@@ -92,14 +96,13 @@ namespace FGame
         }
     }
 
-    public class GamePoleObjectChest : GamePoleStaticObject
+    public class GamePoleObjectChest : GamePoleObject
     {
         public GamePoleObjectChest(Vector2 position, int layer, int type)
         {
-            _position = position;
+            Position = position;
             Layer = layer;
         }
-        private Vector2 _position;
         private const int _width = 32;
         private const int _height = 32;
         public override bool IsObstacle
@@ -107,14 +110,6 @@ namespace FGame
             get
             {
                 return false;
-            }
-        }
-
-        public override Vector2 Position
-        {
-            get
-            {
-                return _position;
             }
         }
 

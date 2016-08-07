@@ -26,12 +26,17 @@ namespace FGame
 
         public bool Intersects(FloatRectangle rect)
         {
-            throw new NotImplementedException();
+            return !(
+                rect.X > X + Width  ||
+                rect.Y > Y + Height ||
+                rect.Y + rect.Height < Y ||
+                rect.X + rect.Width  < X
+                ); 
         }
 
-        public bool Intersects(Vector2 point)
+        public bool IntersectsWith(FloatRectangle rect)
         {
-            return point.X > X && point.X < X + Width && point.Y > Y && point.Y < Y + Height;
+            return rect.X < this.X + this.Width && this.X < rect.X + rect.Width && rect.Y < this.Y + this.Height && this.Y < rect.Y + rect.Height;
         }
 
         public bool IsInside(FloatRectangle rect)

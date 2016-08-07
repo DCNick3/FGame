@@ -33,8 +33,6 @@ namespace FGame
         Effect smoothLightMapperEffect;
         int tileWidth = 32;
         int tileHeight = 32;
-        int chestWidth = 32;
-        int chestHeight = 32;
         int stuffWidth = 24;
         int stuffHeight = 24;
         int stuffPerLine = 16;
@@ -60,10 +58,9 @@ namespace FGame
         bool firstRun = true;
         bool isMoving = false;
         float targetFPS = 60.0F;
-        double r = 0;
         ItemStack holdingItem = null;
         Random rnd = new Random();
-        GamePole gamePole;
+        Location currentLocation;
         List<Fireball> fireballs = new List<Fireball>();
         LightSource[] lightSources;
         TimeSpan fireballStepFreq = TimeSpan.FromSeconds(0.1);
@@ -89,7 +86,8 @@ namespace FGame
          * Add auto-loading for chunks 
          * Add item moving ability ib inventory (done)
          * Add abstraction: Tiles & Chests are StaticObject's 
-         * Add light flikering
+         * Add light flikering (done)
+         * Make normal TextureRegistry
          */
 
         Vector2 ScreenCenter {
@@ -106,7 +104,7 @@ namespace FGame
             player = new Player(this);
             player.Type = 1;
             player.AddItem(new ItemStack(Items.torch, 12));
-            RegenPole();
+            currentLocation = new Location(this);
             particleController = new ParticleController();
             gameRegistry = new GameRegistry();
         }
@@ -263,7 +261,7 @@ namespace FGame
 
             if (keyboardState.IsKeyDown(Keys.OemTilde))
             {
-                RegenPole();
+                //RegenPole();
             }
 
             Rectangle playerRect = new Rectangle((int)player.Position.X, (int)player.Position.Y, playerTextureWidth, playerTextureHeight);
@@ -532,20 +530,6 @@ namespace FGame
             base.Update(gameTime);
         }
 
-        private Point[] GetCollidingTiles(Rectangle rect)
-        {
-            //TODO: optimize!~
-            List<Point> result = new List<Point>();
-            for (int x = gamePole.MinX; x < gamePole.MaxX; x++)
-                for (int y = gamePole.MinY; y < gamePole.MaxY; y++)
-                {
-                    Rectangle r = new Rectangle(x * tileWidth, y * tileHeight, tileWidth, tileHeight);
-                    if (r.Intersects(rect))
-                        result.Add(new Point(x, y));
-                }
-            return result.ToArray();
-        }
-
         private void PlayerMove(int direction, GameTime gameTime)
         {
             player.RunDirection = direction;
@@ -567,18 +551,8 @@ namespace FGame
                     break;
             }
             Rectangle pr = new Rectangle((int)newPos.X + 4, (int)newPos.Y + 4, playerTextureWidth - 8, playerTextureHeight - 4);
-            bool canMove = true;
-            foreach (var coll in GetCollidingTiles(pr))
-                canMove &= gamePole.IsFree(coll);
-            if (canMove)
+            if (currentLocation.IsFree(pr))
                 player.Position = newPos;
-        }
-
-        private void RegenPole()
-        {
-            gamePole = GamePole.Generate(/*64, 64, 30, 30,*/ rnd, this);
-            Point p = gamePole.GetRandomFreePole(rnd);
-            player.Position = new Vector2(p.X * playerTextureWidth, p.Y * playerTextureHeight);
         }
 
         public void UpdateFireballs(GameTime gameTime)
@@ -618,10 +592,7 @@ namespace FGame
                     }
 
                     Rectangle pr = new Rectangle((int)newPos.X + 4, (int)newPos.Y + 4, 32 - 8, 32 - 8);
-                    bool canMove = true;
-                    foreach (var coll in GetCollidingTiles(pr))
-                        canMove &= gamePole.IsFree(coll);
-                    if (canMove)
+                    if (currentLocation.IsFree(pr))
                     {
                         fireball.X = (int)newPos.X;
                         fireball.Y = (int)newPos.Y;
@@ -711,7 +682,7 @@ namespace FGame
 
             //DrawTiles(lightSources);
             spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.NonPremultiplied, SamplerState.PointClamp, DepthStencilState.Default, RasterizerState.CullNone);
-            gamePole.Draw(gameRegistry, spriteBatch, player.Position - ScreenCenter + new Vector2(playerTextureWidth, playerTextureHeight) / 2);
+            currentLocation.Draw(gameRegistry, spriteBatch, player.Position - ScreenCenter + new Vector2(playerTextureWidth, playerTextureHeight) / 2, new Vector2(screenWidth, screenHeight));
             //DrawChests(lightSources);
             DrawFireballs();
             DrawSword(ScreenCenter + new Vector2(playerTextureWidth, playerTextureHeight) / 2f, player.SwordDirection, player.GetSwordLength(gameTime), player.SwordColor);
@@ -759,14 +730,8 @@ namespace FGame
 
             if (debugInfo)
             {
-
-                int x = (int)Math.Floor(player.Position.X / tileWidth / Chunk.width);
-                int y = (int)Math.Floor(player.Position.Y / tileHeight / Chunk.height);
-
-                Vector2 chnkIdIrr = new Vector2(x, y);
                 string dbgnfo = " Pos: " + (player.Position).ToString()
                     + "\n IsRunningSlowly: " + gameTime.IsRunningSlowly
-                    + "\n Chunk: " + new Vector2((int)chnkIdIrr.X, (int)chnkIdIrr.Y)
                     + "\n FPS: " + (int)(1.0F / gameTime.ElapsedGameTime.TotalSeconds);
                 string[] lines = dbgnfo.Split('\n');
                 for (int i = 0; i < lines.Length; i++)
@@ -836,25 +801,6 @@ namespace FGame
             return 1f;
         }
 
-        /*private void DrawChests(LightSource[] lightSources)
-        {
-            foreach (var chunk in gamePole.chunks)
-            {
-                if (chunk != null)
-                    foreach (var chest in chunk.Chests)
-                    {
-                        Vector2 pps = (new Vector2(chest.GlobPosition.X * chestWidth, chest.GlobPosition.Y * chestHeight) - player.Position) / 2;
-                        if (pps.X < screenWidth && pps.Y < screenHeight)
-                        {
-                            Vector2 pos = ScreenCenter - player.Position + new Vector2(chest.GlobPosition.X * chestWidth, chest.GlobPosition.Y * chestHeight - 16);
-                            Point center = new Point(chest.GlobPosition.X * chestWidth + chestWidth / 2, chest.GlobPosition.Y * chestHeight + chestHeight / 2 - 16);
-                            float lightness = GetLightLevel(center, lightSources);
-                            spriteBatch.Draw(chestTexture, pos, new Rectangle(chest.Type * chestWidth, (chest.AnimationFrame) * (chestHeight + 16), chestWidth, chestHeight + 16), Color.White * lightness);
-                        }
-                    }
-            }
-        }*/
-
         private void DrawFireballs()
         {
             int fireballWidth = 75;
@@ -893,36 +839,6 @@ namespace FGame
                 ScreenCenter
                 , new Rectangle(playerTextureWidth * playerRunStep + (int)plOffset.X, playerTextureHeight * player.RunDirection + (int)plOffset.Y, playerTextureWidth, playerTextureHeight), player.Buffs.Where((Buff b) => b.Type == BuffType.Poison).Count() > 0 ? Color.LawnGreen : Color.White);  
         }
-
-        /*private void DrawTiles(LightSource[] lightSources)
-        {
-            //Optimize~
-            spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.NonPremultiplied, SamplerState.PointClamp, DepthStencilState.Default, RasterizerState.CullNone);
-            int mX = (int)Math.Floor((player.Position.X - screenWidth) / tileWidth);
-            int mY = (int)Math.Floor((player.Position.Y- screenHeight) / tileHeight);
-            if (mX < gamePole.MinX)
-                mX = gamePole.MinX;
-            if (mY < gamePole.MinY)
-                mY = gamePole.MinY;
-            int mxX = (int)Math.Floor((player.Position.X + screenWidth) / tileWidth);
-            int mxY = (int)Math.Floor((player.Position.Y + screenHeight) / tileHeight);
-            for (int x = mX; x < mxX; x++)
-                for (int y = mY; y < mxY; y++)
-                {
-                    Vector2 pps = (new Vector2(x, y) * tileWidth - player.Position) / 2;
-                    pps = new Vector2(Math.Abs(pps.X), Math.Abs(pps.Y));
-                    Tile t = gamePole.GetTileAt(new Point(x, y));
-                    if (t != null && t.Id != 0)
-                    {
-                        Point center = new Point(x * tileWidth + tileWidth / 2, y * tileHeight + tileHeight / 2);
-                        float lightness = GetLightLevel(center, lightSources);
-                        if (t.IsObstacle)
-                            lightness = (lightness * 0.75f);
-                        spriteBatch.Draw(tileTexture, ScreenCenter - player.Position + new Vector2(x * tileWidth, y * tileHeight), GetTilePos(t.Id), Color.White * lightness);
-                    }
-                }
-            spriteBatch.End();
-        }*/
 
         private Rectangle GetTilePos(int n)
         {
@@ -1116,29 +1032,6 @@ namespace FGame
             m.Y = -(float)(Math.Cos(direction) * swordHeight);
             float rot = (float)direction;
             Vector2 origin = new Vector2(swordWidth / 2F, swordHeight);
-            /*switch (direction)
-            {
-                case 0:
-                    ym *= 1;
-                    xm *= 0;
-                    rot = (float)Math.PI;
-                    break;
-                case 1:
-                    ym *= 0;
-                    xm *= -1;
-                    rot = 1.5f * (float)Math.PI;
-                    break;
-                case 2:
-                    ym *= 0;
-                    xm *= 1;
-                    rot = 0.5f * (float)Math.PI;
-                    break;
-                case 3:
-                    ym *= -1;
-                    xm *= 0;
-                    rot = 0f;
-                    break;
-            }*/
             for (int i = 0; i < c1; i++)
             {
                 spriteBatch.Draw(swordTexture, new Rectangle((int)(position.X + m.X * i - m.X / swordWidth * (swordHeight - rem)), (int)(position.Y + m.Y * i - m.Y / swordHeight * (swordHeight - rem)), swordWidth, (i == 0 ? rem : swordHeight)), new Rectangle(swordWidth, 0, swordWidth, (i == 0 ? rem : swordHeight)), color, rot, origin, SpriteEffects.None, 0);
