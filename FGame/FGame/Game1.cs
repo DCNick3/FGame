@@ -31,8 +31,6 @@ namespace FGame
         SpriteFont font11;
         Effect smoothLightEffect;
         Effect smoothLightMapperEffect;
-        int tileWidth = 32;
-        int tileHeight = 32;
         int stuffWidth = 24;
         int stuffHeight = 24;
         int stuffPerLine = 16;
@@ -43,10 +41,10 @@ namespace FGame
         int screenHeight = 600;
         int swordWidth = 32;
         int swordHeight = 32;
+        int fpsCounter = 0;
+        int fps = 0;
         KeyboardState keyboardState;
         KeyboardState lastKeyboardState;
-        MouseState mouseState;
-        MouseState lastMouseState;
         TimeSpan runFreq = TimeSpan.FromSeconds(0.3);
         TimeSpan lastRunUpdate = new TimeSpan(0);
         int playerRunStep = 1;
@@ -57,7 +55,8 @@ namespace FGame
         bool enableDevCheats = true;
         bool firstRun = true;
         bool isMoving = false;
-        float targetFPS = 60.0F;
+        bool isFullScreen = false;
+        float targetFPS = 85.0F;
         ItemStack holdingItem = null;
         Random rnd = new Random();
         Location currentLocation;
@@ -71,23 +70,35 @@ namespace FGame
         TimeSpan lastFireballSpawn = new TimeSpan(0);
         TimeSpan chestAnimationSpeed = TimeSpan.FromSeconds(0.2);
         TimeSpan lastChestAnimation = new TimeSpan(0);
+        TimeSpan fpsCounterResetFreq = TimeSpan.FromSeconds(1);
+        TimeSpan lastFpsCounterReset = new TimeSpan(0);
         GameRegistry gameRegistry;
         internal ParticleController particleController;
         internal GameTime gameTime;
 
+
+
         /*
          * TODO: Block
          * Add smooth light (done)
-         * Add bauble hint
+         * Add bauble hints
          * Add chunked-world (done)
          * Normal onKeyPress (done)
          * Tree world generating algorithm (done)
-         * Add abstraction to GamePole and Chunk!
-         * Add auto-loading for chunks 
+         * Add abstraction to GamePole and Chunk! (plans are changed!)
+         * Add auto-loading for chunks (plans are changed!)
          * Add item moving ability ib inventory (done)
-         * Add abstraction: Tiles & Chests are StaticObject's 
+         * Add abstraction: Tiles & Chests are GamePoleObject's (done)
          * Add light flikering (done)
-         * Make normal TextureRegistry
+         * Improve TextureRegistry
+         * Add loading locations from file
+         * Create location editor
+         * Fix the bug with wrongly drawed tiles (done)
+         * Imrove moving algorythm (that won't have bug with speedhack) (done)
+         * Add collides
+         * Add moving objects
+         * Add mobs
+         * Add knockback
          */
 
         Vector2 ScreenCenter {
@@ -117,10 +128,11 @@ namespace FGame
         /// </summary>
         protected override void Initialize()
         {
-            IsMouseVisible = true;
+            IsMouseVisible = false;
 
             graphics.PreferredBackBufferHeight = screenHeight;
             graphics.PreferredBackBufferWidth = screenWidth;
+            graphics.SynchronizeWithVerticalRetrace = true;
             graphics.ApplyChanges();
 
             TargetElapsedTime = TimeSpan.FromSeconds(1F / targetFPS);
@@ -179,6 +191,13 @@ namespace FGame
         {
             this.gameTime = gameTime;
             
+            if (gameTime.TotalGameTime - lastFpsCounterReset > fpsCounterResetFreq)
+            {
+                fps = fpsCounter;
+                fpsCounter = 0;
+                lastFpsCounterReset = gameTime.TotalGameTime;
+            }
+
             if (gameTime.TotalGameTime - lastRunUpdate > runFreq)
             {
                 if (isMoving)
@@ -215,8 +234,6 @@ namespace FGame
 
             lastKeyboardState = keyboardState;
             keyboardState = Keyboard.GetState();
-            lastMouseState = mouseState;
-            mouseState = Mouse.GetState();
             if (firstRun)
             {
                 firstRun = false;
@@ -265,32 +282,13 @@ namespace FGame
             }
 
             Rectangle playerRect = new Rectangle((int)player.Position.X, (int)player.Position.Y, playerTextureWidth, playerTextureHeight);
-            if (KeyPress(Keys.E)) { }
-                /*foreach (var chest in gamePole.Chests)
-                {
-                    Rectangle chestRect = new Rectangle(chest.GlobPosition.X * chestWidth, chest.GlobPosition.Y * chestHeight, chestWidth, chestHeight);
-                    if (chestRect.Intersects(playerRect) && !chest.IsOpen)
-                    {
-                        chest.OpenStart(player);
-                        break;
-                    }
-                }*/
-
-            /*if (gameTime.TotalGameTime - lastChestAnimation > chestAnimationSpeed)
+            if (KeyPress(Keys.E))
             {
-                foreach (var chest in gamePole.Chests)
+                foreach (var obj in currentLocation.GetObjectsIntersectsRect(playerRect))
                 {
-                    if (chest.AnimationFrame != 0 && chest.AnimationFrame != 3)
-                    {
-                        chest.AnimationFrame++;
-                        if (chest.AnimationFrame == 3)
-                        {
-                            chest.OpenEnd(player);
-                        }
-                    }
+                    obj.Interact(player);
                 }
-                lastChestAnimation = gameTime.TotalGameTime;
-            }*/
+            }
 
             for (int i = 0; i < player.Buffs.Count; i++)
             {
@@ -382,7 +380,8 @@ namespace FGame
 
             if (KeyPress(Keys.F4))
             {
-                graphics.ToggleFullScreen();
+                isFullScreen = !isFullScreen;
+                //TODO: Fix fullscreen bug
             }
 
             if (!player.IsInInventory)
@@ -507,20 +506,7 @@ namespace FGame
                 }
             }
 
-            if (lastMouseState.LeftButton == ButtonState.Released && mouseState.LeftButton == ButtonState.Pressed)
-            {//LClickStart
 
-            }
-
-            if (mouseState.LeftButton == ButtonState.Pressed)
-            {//LClickLong
-
-            }
-
-            if (mouseState.LeftButton == ButtonState.Released && lastMouseState.LeftButton == ButtonState.Pressed)
-            {//LClickEnd
-
-            }
 
             particleController.Update(gameTime);
             if (player.Type == 1)
@@ -530,33 +516,41 @@ namespace FGame
             base.Update(gameTime);
         }
 
+        private Vector2 PlayerMuiltipluer(int direction)
+        {
+            switch (direction)
+            {
+                case 0:
+                    return new Vector2(0, 1);
+                case 1:
+                    return new Vector2(-1, 0);
+                case 2:
+                    return new Vector2(1, 0);
+                case 3:
+                    return new Vector2(0, -1);
+            }
+            return new Vector2(0, 0);
+        }
+
         private void PlayerMove(int direction, GameTime gameTime)
         {
             player.RunDirection = direction;
             if (!player.CanMove) return;
-            Vector2 newPos = player.Position;
-            switch (direction)
-            {
-                case 0:
-                    newPos.Y += player.Speed * (float)gameTime.ElapsedGameTime.TotalMilliseconds;
-                    break;
-                case 1:
-                    newPos.X -= player.Speed * (float)gameTime.ElapsedGameTime.TotalMilliseconds;
-                    break;
-                case 2:
-                    newPos.X += player.Speed * (float)gameTime.ElapsedGameTime.TotalMilliseconds;
-                    break;
-                case 3:
-                    newPos.Y -= player.Speed * (float)gameTime.ElapsedGameTime.TotalMilliseconds;
-                    break;
-            }
+            Vector2 multipluer = PlayerMuiltipluer(direction);
+
+            Vector2 newPos = player.Position + multipluer * player.Speed * (float)gameTime.ElapsedGameTime.TotalMilliseconds;
             Rectangle pr = new Rectangle((int)newPos.X + 4, (int)newPos.Y + 4, playerTextureWidth - 8, playerTextureHeight - 4);
-            if (currentLocation.IsFree(pr))
-                player.Position = newPos;
+            while (!currentLocation.IsFree(pr))
+            {
+                newPos += -1 * multipluer;
+                pr = new Rectangle((int)newPos.X + 4, (int)newPos.Y + 4, playerTextureWidth - 8, playerTextureHeight - 4);
+            } 
+            player.Position = newPos;
         }
 
         public void UpdateFireballs(GameTime gameTime)
         {
+            fireballs.RemoveAll((Fireball f) => GetDistance(new Point(f.X, f.Y), player.Position.ToPoint()) > 3200);
             if (gameTime.TotalGameTime - lastFireballStepUpdate > fireballStepFreq)
             {
                 foreach (var fireball in fireballs)
@@ -618,6 +612,8 @@ namespace FGame
 
                 lastFireballMoveUpdate = gameTime.TotalGameTime;
             }
+
+            currentLocation.Update(gameRegistry, gameTime);
         }
 
         
@@ -682,7 +678,7 @@ namespace FGame
 
             //DrawTiles(lightSources);
             spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.NonPremultiplied, SamplerState.PointClamp, DepthStencilState.Default, RasterizerState.CullNone);
-            currentLocation.Draw(gameRegistry, spriteBatch, player.Position - ScreenCenter + new Vector2(playerTextureWidth, playerTextureHeight) / 2, new Vector2(screenWidth, screenHeight));
+            currentLocation.Draw(gameRegistry, spriteBatch, player.Position - ScreenCenter, new Vector2(screenWidth, screenHeight));
             //DrawChests(lightSources);
             DrawFireballs();
             DrawSword(ScreenCenter + new Vector2(playerTextureWidth, playerTextureHeight) / 2f, player.SwordDirection, player.GetSwordLength(gameTime), player.SwordColor);
@@ -730,21 +726,18 @@ namespace FGame
 
             if (debugInfo)
             {
-                string dbgnfo = " Pos: " + (player.Position).ToString()
+                string dbgnfo = " Pos: \n    " + player.Position.X + "\n    " + player.Position.Y
                     + "\n IsRunningSlowly: " + gameTime.IsRunningSlowly
-                    + "\n FPS: " + (int)(1.0F / gameTime.ElapsedGameTime.TotalSeconds);
-                string[] lines = dbgnfo.Split('\n');
-                for (int i = 0; i < lines.Length; i++)
-                {
-                    string ln = lines[i];
-                    Vector2 sz = font14.MeasureString(ln);
-                    spriteBatch.DrawString(font14, ln, new Vector2(screenWidth - sz.X, i * (sz.Y + 1)), Color.White);
-                }
+                    + "\n FPS: " + fps
+                    + "\n Fireballs: " + fireballs.Count;
+                Vector2 sz = font14.MeasureString(dbgnfo);
+                spriteBatch.DrawString(font14, dbgnfo, new Vector2(0, screenHeight - sz.Y), Color.White);
             }
 
             spriteBatch.End();
             
             gamePoleImg.Dispose();
+            fpsCounter++;
 
             base.Draw(gameTime);
         }
@@ -836,16 +829,8 @@ namespace FGame
             if (player.Type == 2)
                 plOffset.Y = 128;
             spriteBatch.Draw(playerTexture, //new Rectangle((int)playerPosition.X, (int)playerPosition.Y, playerTextureWidth, playerTextureHeight)
-                ScreenCenter
+                ScreenCenter //- (new Vector2(playerTextureWidth, playerTextureHeight) / 2)
                 , new Rectangle(playerTextureWidth * playerRunStep + (int)plOffset.X, playerTextureHeight * player.RunDirection + (int)plOffset.Y, playerTextureWidth, playerTextureHeight), player.Buffs.Where((Buff b) => b.Type == BuffType.Poison).Count() > 0 ? Color.LawnGreen : Color.White);  
-        }
-
-        private Rectangle GetTilePos(int n)
-        {
-            int width = 8;
-            int x = n % width;
-            int y = n / width;
-            return new Rectangle(x * tileWidth, y * tileHeight, tileWidth, tileHeight);
         }
 
         private Rectangle GetStuffCoord(int stuffId)

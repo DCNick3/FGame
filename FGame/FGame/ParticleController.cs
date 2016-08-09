@@ -39,7 +39,7 @@ namespace FGame.ParticleSystem
         {
             if (random.Next(2) == 1)
             {
-                Vector2 velocity = AngleToV2((float)(Math.PI * 2d * random.NextDouble()), .2f);
+                Vector2 velocity = AngleToV2((float)(Math.PI * 2d * random.NextDouble()), (float)random.NextDouble() * 0.5f);
                 float angle = 0;
                 float angleVel = (float)(Math.PI / 20);
                 Vector4 color = new Vector4(1.0f, 0.5f, 0.5f, 0.5f);
@@ -62,7 +62,7 @@ namespace FGame.ParticleSystem
         {
             for (int i = 0; i < 10; i++)
             {
-                Vector2 velocity = AngleToV2((float)(Math.PI * 2d * random.NextDouble()), .2f);
+                Vector2 velocity = AngleToV2((float)(Math.PI * 2d * random.NextDouble()), (float)random.NextDouble() * 0.5f);
                 float angle = 0;
                 float angleVel = (float)(Math.PI * 2d * random.NextDouble() / 45.0);
                 Vector4 color = new Vector4(0.5f, 0.5f, 1f, 0.5f);
@@ -72,7 +72,7 @@ namespace FGame.ParticleSystem
                 float alphaVel = .003f;
                 bool isLight = true;
                 float light = 60f;
-                float lightVel = -0.1f;
+                float lightVel = -0.3f;
                 float lightMax = 0.5f;
                 float lightMaxVel = -0.0005f;
 
@@ -85,7 +85,7 @@ namespace FGame.ParticleSystem
         {
             if (random.Next(20) == 1)
             {
-                Vector2 velocity = AngleToV2((float)(Math.PI * 2d * random.NextDouble()), .2f);
+                Vector2 velocity = AngleToV2((float)(Math.PI * 2d * random.NextDouble()), (float)random.NextDouble() * 0.5f);
                 float angle = 0;
                 float angleVel = (float)(Math.PI * random.NextDouble() / 45.0);
                 Vector4 color = new Vector4(0.5f, 0.5f, 1f, 0.5f);
@@ -95,7 +95,7 @@ namespace FGame.ParticleSystem
                 float alphaVel = .003f;
                 bool isLight = true;
                 float light = 20f;
-                float lightVel = -0.1f;
+                float lightVel = -0.2f;
                 float lightMax = 0.5f;
                 float lightMaxVel = -0.0005f;
 
@@ -108,7 +108,7 @@ namespace FGame.ParticleSystem
         {
             for (int a = 0; a < 40; a++)
             {
-                Vector2 velocity = AngleToV2((float)(Math.PI * 2d * random.NextDouble()), (float)random.NextDouble() / 5);
+                Vector2 velocity = AngleToV2((float)(Math.PI * 2d * random.NextDouble()), (float)random.NextDouble() * 0.5f);
                 float angle = 0;
                 float angleVel = (float)(Math.PI * 2d * random.NextDouble() / 45.0);
                 Vector4 color = new Vector4(1.0f, 0.5f, 0.5f, 0.5f);

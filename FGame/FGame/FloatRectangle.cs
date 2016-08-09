@@ -24,17 +24,17 @@ namespace FGame
         public float Width { get; set; }
         public float Height { get; set; }
 
-        public bool Intersects(FloatRectangle rect)
-        {
-            return !(
-                rect.X > X + Width  ||
-                rect.Y > Y + Height ||
-                rect.Y + rect.Height < Y ||
-                rect.X + rect.Width  < X
-                ); 
-        }
+        //public bool Intersects(FloatRectangle rect)
+        //{
+         //   return !(
+           //     rect.X > X + Width  ||
+             //   rect.Y > Y + Height ||
+               // rect.Y + rect.Height < Y ||
+                //rect.X + rect.Width  < X
+                //); 
+        //}
 
-        public bool IntersectsWith(FloatRectangle rect)
+        public bool Intersects(FloatRectangle rect)
         {
             return rect.X < this.X + this.Width && this.X < rect.X + rect.Width && rect.Y < this.Y + this.Height && this.Y < rect.Y + rect.Height;
         }
@@ -42,6 +42,12 @@ namespace FGame
         public bool IsInside(FloatRectangle rect)
         {
             throw new NotImplementedException();
+        }
+
+        public bool Contains(Vector2 point)
+        {
+            return point.X >= X && point.X < X + Width
+                && point.Y >= Y && point.Y < Y + Height;
         }
     }
 }

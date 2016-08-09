@@ -27,6 +27,7 @@ namespace FGame
             }
         }
 
+
         private List<AStarNode> GetNeighbours(AStarNode pathNode, Point goal, int nullWeight, int wallWeight)
         {
             var result = new List<AStarNode>();
@@ -170,22 +171,27 @@ namespace FGame
                 o2p = new Dictionary<GamePoleObject, HashSet<Point>>();
             }
             
-            public GamePoleObject[] GetObjectsInZone(Point p)
+            //public GamePoleObject[] GetObjectsInZone(Point p)
+            //{
+            //    return GetObjectsInZone(p.ToVector2());
+            //}
+
+            //public GamePoleObject[] GetObjectsInZone(Vector2 p)
+            //{
+            //    Point x = new Point((int)Math.Floor(p.X / zoneSize), (int)Math.Floor(p.Y / zoneSize));
+            //    HashSet<GamePoleObject> res;
+            //    if (p2o.TryGetValue(x, out res))
+            //        return res.ToArray();
+            //    else
+            //        return (p2o[x] = new HashSet<GamePoleObject>()).ToArray();
+            //}
+
+            private Point GetZone(Vector2 point)
             {
-                return GetObjectsInZone(p.ToVector2());
+                return new Point((int)Math.Floor(point.X / zoneSize), (int)Math.Floor(point.Y / zoneSize));
             }
 
-            public GamePoleObject[] GetObjectsInZone(Vector2 p)
-            {
-                Point x = new Point((int)Math.Floor(p.X / zoneSize), (int)Math.Floor(p.Y / zoneSize));
-                HashSet<GamePoleObject> res;
-                if (p2o.TryGetValue(x, out res))
-                    return res.ToArray();
-                else
-                    return (p2o[x] = new HashSet<GamePoleObject>()).ToArray();
-            }
-
-            private Point[] GetPoses(FloatRectangle rect)
+            private Point[] GetZones(FloatRectangle rect)
             {
                 List<Point> result = new List<Point>();
                 Point firstZone = new Point((int)Math.Floor(rect.X / zoneSize), (int)Math.Floor(rect.Y / zoneSize));
@@ -213,9 +219,9 @@ namespace FGame
                 return result.ToArray();
             }
 
-            private Point[] GetPoses(GamePoleObject obj)
+            private Point[] GetZones(GamePoleObject obj)
             {
-                return GetPoses(obj.Rectangle);
+                return GetZones(obj.Rectangle);
             }
 
             private void AppendObjectPoses(GamePoleObject obj, Point[] poses)
@@ -236,7 +242,7 @@ namespace FGame
             public void ObjectMove(GamePoleObject obj)
             {
                 Point[] oldPoses = o2p[obj].ToArray();
-                Point[] newPoses = GetPoses(obj);
+                Point[] newPoses = GetZones(obj);
                 for (int i = 0; i < oldPoses.Length; i++)
                 {
                     p2o[oldPoses[i]].Remove(obj);
@@ -246,7 +252,7 @@ namespace FGame
 
             public void AddObject(GamePoleObject obj)
             {
-                Point[] zones = GetPoses(obj);
+                Point[] zones = GetZones(obj);
                 AppendObjectPoses(obj, zones);
             }
 
@@ -262,7 +268,7 @@ namespace FGame
 
             public GamePoleObject[] GetObjectsIntersectsRect(FloatRectangle rect)
             {
-                Point[] zones = GetPoses(rect);
+                Point[] zones = GetZones(rect);
                 HashSet<GamePoleObject> objs = new HashSet<GamePoleObject>();
                 for (int i = 0; i < zones.Length; i++)
                 {
@@ -279,6 +285,18 @@ namespace FGame
                 }
                 return objs.Where((GamePoleObject o) => o.Rectangle.Intersects(rect)).ToArray();
             }
+
+            internal GamePoleObject[] GetObjectsIntersectsPoint(Vector2 point)
+            {
+                Point zone = GetZone(point);
+                HashSet<GamePoleObject> obj;
+                if (!p2o.TryGetValue(zone, out obj))
+                {
+                    obj = new HashSet<GamePoleObject>();
+                    p2o[zone] = obj;
+                }
+                return obj.Where((GamePoleObject o) => o.Rectangle.Contains(point)).ToArray();
+            }
         }
 
         protected Game1 game;
@@ -290,10 +308,16 @@ namespace FGame
             this.game = game;
             objects = new List<GamePoleObject>();
             cache = new ObjectCache();
+            Random rnd = new Random();
             for (int i = 0; i < 128; i++)
             {
                 for (int j = 0; j < 128; j++)
-                    AddObject(new GamePoleObjectTile(new Vector2(i * 32f + 64f, j * 32f), i, false, 0));
+                    AddObject(new GamePoleObjectTile(new Vector2(i * 32f, j * 32f), i, i % 2 == 0, 0));
+            }
+
+            for (int i = 0; i < 128; i++)
+            {
+                AddObject(new GamePoleObjectChest(new Vector2(rnd.Next(0, 128 * 32), rnd.Next(0, 128 * 32)), 1, rnd.Next(4)));
             }
         }
         
@@ -325,7 +349,7 @@ namespace FGame
 
         public GamePoleObject[] GetObjectsIntersectsPoint(Vector2 point)
         {
-            throw new NotImplementedException();
+            return cache.GetObjectsIntersectsPoint(point);
         }
 
         public GamePoleObject[] GetObjectsInRect(Rectangle rect)
@@ -341,6 +365,10 @@ namespace FGame
         public GamePoleObject[] GetObjectsIntersectsRect(FloatRectangle rect)
         {
             return cache.GetObjectsIntersectsRect(rect);
+        }
+        public GamePoleObject[] GetObjectsIntersectsRect(System.Drawing.Rectangle rectangle)
+        {
+            return GetObjectsIntersectsRect(new Rectangle(rectangle.X, rectangle.Y, rectangle.Width, rectangle.Height));
         }
 
         public void RemoveObject(GamePoleObject obj)
@@ -364,21 +392,37 @@ namespace FGame
 
         public void Draw(GameRegistry registry, SpriteBatch spriteBatch, Vector2 screenPos, Vector2 screenSize)
         {
-            GamePoleObject[] o2d = GetObjectsIntersectsRect(new FloatRectangle(screenPos.X, screenPos.Y, screenSize.X, screenSize.Y));
+            GamePoleObject[] o2d = GetObjectsIntersectsRect(new FloatRectangle(screenPos.X, screenPos.Y, screenSize.X, screenSize.Y)).OrderBy((GamePoleObject o) => o.Layer).ToArray();
             for (int i = 0; i < o2d.Length; i++)
             {
-                o2d[i].Draw(registry, spriteBatch, screenPos - new Vector2(32,32)); //TODO: КОСТЫЛЬ!
+                o2d[i].Draw(registry, spriteBatch, screenPos); 
             }
         }
 
-        public virtual void Update(GameRegistry registry, GameTime gameTime)
+        public void Update(GameRegistry registry, GameTime gameTime)
         {
             for (int i = 0; i < objects.Count; i++)
             {
                 var obj = objects[i];
                 obj.Update(registry, gameTime);
                 if (obj.Moved)
+                {
                     cache.ObjectMove(obj);
+                    obj.Moved = false;
+                }
+            }
+        }
+
+        public void UpdateCache()
+        {
+            for (int i = 0; i < objects.Count; i++)
+            {
+                var obj = objects[i];
+                if (obj.Moved)
+                {
+                    cache.ObjectMove(obj);
+                    obj.Moved = false;
+                }
             }
         }
     }

@@ -12,7 +12,15 @@ namespace FGame
         {
             return new Point((int)vect.X, (int)vect.Y);
         }
+        public static System.Drawing.Point ToDrawingPoint(this Vector2 vect)
+        {
+            return new System.Drawing.Point((int)vect.X, (int)vect.Y);
+        }
         public static Vector2 ToVector2(this Point pnt)
+        {
+            return new Vector2(pnt.X, pnt.Y);
+        }
+        public static Vector2 ToVector2(this System.Drawing.Point pnt)
         {
             return new Vector2(pnt.X, pnt.Y);
         }

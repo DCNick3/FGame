@@ -9,6 +9,11 @@ namespace FGame
 {
     public abstract class GamePoleObject
     {
+        public GamePoleObject()
+        {
+            UUID = Guid.NewGuid();
+        }
+
         private Vector2 _pos;
         public Vector2 Position
         {
@@ -22,13 +27,21 @@ namespace FGame
                 Moved = true;
             }
         }
-        internal bool Moved { private set; get; }
+        internal bool Moved { set; get; }
         public abstract Vector2 Size { get; }
         public abstract bool IsObstacle { get; }
         public FloatRectangle Rectangle { get { return new FloatRectangle(Position.X, Position.Y, Size.X, Size.Y); } }
         public virtual void Draw(GameRegistry registry, SpriteBatch spriteBatch, Vector2 screenPos) { }
         public virtual void Update(GameRegistry registry, GameTime gameTime) { }
+        public virtual void Interact(Player player) { }
+        public virtual void Collide(Player player) { }
         public int Layer { get; protected set; }
+        public Guid UUID { get; private set; }
+
+        public void __hackSetLayer(int val)
+        {
+            Layer = val;
+        }
         /* Layers:
          * 0 to 5   - tiles
          * 6 to 10  - tile effects
@@ -91,8 +104,12 @@ namespace FGame
             Rectangle src = GetSourceRect();
             Vector2 pos = Position - screenPos;
             Color color = _isObstacle ? Color.White * 0.75f : Color.White;
-            Vector2 origin = Size / 2f;
+            Vector2 origin = Vector2.Zero;
             spriteBatch.Draw(tiles, pos, src, color, 0f, origin, 1f, SpriteEffects.None, 0);
+        }
+
+        public override void Update(GameRegistry registry, GameTime gameTime)
+        {
         }
     }
 
@@ -102,9 +119,14 @@ namespace FGame
         {
             Position = position;
             Layer = layer;
+            Type = type;
         }
+        private TimeSpan animationFrameLength = TimeSpan.FromSeconds(0.2);
+        private TimeSpan lastAnimationFrame;
+        private bool isOpening = false;
+        private Player openingBy = null;
         private const int _width = 32;
-        private const int _height = 32;
+        private const int _height = 48;
         public override bool IsObstacle
         {
             get
@@ -123,7 +145,7 @@ namespace FGame
 
         private Rectangle GetSourceRect()
         {
-            return new Rectangle(Type * _width, (AnimationFrame) * (_height + 16), _width, _height + 16);
+            return new Rectangle(Type * _width, (AnimationFrame) * (_height), _width, _height);
         }
 
         public int Type { get; set; }
@@ -134,8 +156,30 @@ namespace FGame
             Texture2D chest = registry.GetTexture("chest");
             Rectangle src = GetSourceRect();
             Vector2 pos = Position - screenPos;
-            Vector2 origin = Size / 2f;
+            Vector2 origin = Vector2.Zero;
             spriteBatch.Draw(chest, pos, src, Color.White, 0f, origin, 1f, SpriteEffects.None, 0);
+        }
+
+        public override void Update(GameRegistry registry, GameTime gameTime)
+        {
+            if (gameTime.TotalGameTime - lastAnimationFrame >= animationFrameLength && isOpening)
+            {
+                lastAnimationFrame = gameTime.TotalGameTime;
+
+                if (AnimationFrame < 3)
+                    AnimationFrame++;
+                else
+                {
+                    isOpening = false;
+                    openingBy.AddItem(new ItemStack(Items.goldCoin, 2));
+                }
+            }
+        }
+
+        public override void Interact(Player player)
+        {
+            isOpening = true;
+            openingBy = player;
         }
     }
 }
