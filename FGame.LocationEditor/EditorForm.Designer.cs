@@ -44,7 +44,14 @@
             this.helpToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.aboutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolPanel = new System.Windows.Forms.Panel();
-            this.label1 = new System.Windows.Forms.Label();
+            this.tilePanel = new System.Windows.Forms.Panel();
+            this.changeTypeButton = new System.Windows.Forms.Button();
+            this.tileLabel = new System.Windows.Forms.Label();
+            this.objectMovePanel = new System.Windows.Forms.Panel();
+            this.moveToButton = new System.Windows.Forms.Button();
+            this.layerMinusButton = new System.Windows.Forms.Button();
+            this.layerPlusButton = new System.Windows.Forms.Button();
+            this.objectInfoLabel = new System.Windows.Forms.Label();
             this.cameraInfoLabel = new System.Windows.Forms.Label();
             this.mevePanel = new System.Windows.Forms.Panel();
             this.moveDownButton = new System.Windows.Forms.Button();
@@ -52,15 +59,12 @@
             this.moveLeftButton = new System.Windows.Forms.Button();
             this.moveRightButton = new System.Windows.Forms.Button();
             this.keyInputTimer = new System.Windows.Forms.Timer(this.components);
-            this.objectMovePanel = new System.Windows.Forms.Panel();
-            this.layerMinusButton = new System.Windows.Forms.Button();
-            this.layerPlusButton = new System.Windows.Forms.Button();
-            this.moveToButton = new System.Windows.Forms.Button();
             this.gamePoleView = new System.Windows.Forms.PictureBox();
             this.MainMenuStrip.SuspendLayout();
             this.toolPanel.SuspendLayout();
-            this.mevePanel.SuspendLayout();
+            this.tilePanel.SuspendLayout();
             this.objectMovePanel.SuspendLayout();
+            this.mevePanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.gamePoleView)).BeginInit();
             this.SuspendLayout();
             // 
@@ -133,26 +137,28 @@
             this.tileToolStripMenuItem,
             this.chestToolStripMenuItem});
             this.addToolStripMenuItem.Name = "addToolStripMenuItem";
-            this.addToolStripMenuItem.Size = new System.Drawing.Size(107, 22);
+            this.addToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.addToolStripMenuItem.Text = "Add";
             // 
             // tileToolStripMenuItem
             // 
             this.tileToolStripMenuItem.Name = "tileToolStripMenuItem";
-            this.tileToolStripMenuItem.Size = new System.Drawing.Size(104, 22);
+            this.tileToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.tileToolStripMenuItem.Text = "Tile";
+            this.tileToolStripMenuItem.Click += new System.EventHandler(this.tileToolStripMenuItem_Click);
             // 
             // chestToolStripMenuItem
             // 
             this.chestToolStripMenuItem.Name = "chestToolStripMenuItem";
-            this.chestToolStripMenuItem.Size = new System.Drawing.Size(104, 22);
+            this.chestToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.chestToolStripMenuItem.Text = "Chest";
             // 
             // deleteToolStripMenuItem
             // 
             this.deleteToolStripMenuItem.Name = "deleteToolStripMenuItem";
-            this.deleteToolStripMenuItem.Size = new System.Drawing.Size(107, 22);
+            this.deleteToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.deleteToolStripMenuItem.Text = "Delete";
+            this.deleteToolStripMenuItem.Click += new System.EventHandler(this.deleteToolStripMenuItem_Click);
             // 
             // helpToolStripMenuItem
             // 
@@ -170,8 +176,9 @@
             // 
             // toolPanel
             // 
+            this.toolPanel.Controls.Add(this.tilePanel);
             this.toolPanel.Controls.Add(this.objectMovePanel);
-            this.toolPanel.Controls.Add(this.label1);
+            this.toolPanel.Controls.Add(this.objectInfoLabel);
             this.toolPanel.Controls.Add(this.cameraInfoLabel);
             this.toolPanel.Dock = System.Windows.Forms.DockStyle.Right;
             this.toolPanel.Location = new System.Drawing.Point(657, 24);
@@ -179,14 +186,90 @@
             this.toolPanel.Size = new System.Drawing.Size(260, 566);
             this.toolPanel.TabIndex = 2;
             // 
-            // label1
+            // tilePanel
             // 
-            this.label1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.label1.Dock = System.Windows.Forms.DockStyle.Top;
-            this.label1.Location = new System.Drawing.Point(0, 46);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(260, 90);
-            this.label1.TabIndex = 0;
+            this.tilePanel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.tilePanel.Controls.Add(this.changeTypeButton);
+            this.tilePanel.Controls.Add(this.tileLabel);
+            this.tilePanel.Dock = System.Windows.Forms.DockStyle.Top;
+            this.tilePanel.Location = new System.Drawing.Point(0, 198);
+            this.tilePanel.Name = "tilePanel";
+            this.tilePanel.Size = new System.Drawing.Size(260, 56);
+            this.tilePanel.TabIndex = 6;
+            this.tilePanel.Visible = false;
+            // 
+            // changeTypeButton
+            // 
+            this.changeTypeButton.Location = new System.Drawing.Point(3, 24);
+            this.changeTypeButton.Name = "changeTypeButton";
+            this.changeTypeButton.Size = new System.Drawing.Size(126, 23);
+            this.changeTypeButton.TabIndex = 1;
+            this.changeTypeButton.Text = "Change Type...";
+            this.changeTypeButton.UseVisualStyleBackColor = true;
+            this.changeTypeButton.Click += new System.EventHandler(this.changeTypeButton_Click);
+            // 
+            // tileLabel
+            // 
+            this.tileLabel.Dock = System.Windows.Forms.DockStyle.Top;
+            this.tileLabel.Location = new System.Drawing.Point(0, 0);
+            this.tileLabel.Name = "tileLabel";
+            this.tileLabel.Size = new System.Drawing.Size(258, 21);
+            this.tileLabel.TabIndex = 0;
+            // 
+            // objectMovePanel
+            // 
+            this.objectMovePanel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.objectMovePanel.Controls.Add(this.moveToButton);
+            this.objectMovePanel.Controls.Add(this.layerMinusButton);
+            this.objectMovePanel.Controls.Add(this.layerPlusButton);
+            this.objectMovePanel.Dock = System.Windows.Forms.DockStyle.Top;
+            this.objectMovePanel.Location = new System.Drawing.Point(0, 136);
+            this.objectMovePanel.Name = "objectMovePanel";
+            this.objectMovePanel.Size = new System.Drawing.Size(260, 62);
+            this.objectMovePanel.TabIndex = 4;
+            this.objectMovePanel.Visible = false;
+            // 
+            // moveToButton
+            // 
+            this.moveToButton.Location = new System.Drawing.Point(5, 32);
+            this.moveToButton.Name = "moveToButton";
+            this.moveToButton.Size = new System.Drawing.Size(124, 23);
+            this.moveToButton.TabIndex = 7;
+            this.moveToButton.TabStop = false;
+            this.moveToButton.Text = "Move To...";
+            this.moveToButton.UseVisualStyleBackColor = true;
+            this.moveToButton.Click += new System.EventHandler(this.moveToButton_Click);
+            // 
+            // layerMinusButton
+            // 
+            this.layerMinusButton.Location = new System.Drawing.Point(135, 3);
+            this.layerMinusButton.Name = "layerMinusButton";
+            this.layerMinusButton.Size = new System.Drawing.Size(119, 23);
+            this.layerMinusButton.TabIndex = 5;
+            this.layerMinusButton.TabStop = false;
+            this.layerMinusButton.Text = "Layer -";
+            this.layerMinusButton.UseVisualStyleBackColor = true;
+            this.layerMinusButton.Click += new System.EventHandler(this.layerMinusButton_Click);
+            // 
+            // layerPlusButton
+            // 
+            this.layerPlusButton.Location = new System.Drawing.Point(3, 3);
+            this.layerPlusButton.Name = "layerPlusButton";
+            this.layerPlusButton.Size = new System.Drawing.Size(126, 23);
+            this.layerPlusButton.TabIndex = 4;
+            this.layerPlusButton.TabStop = false;
+            this.layerPlusButton.Text = "Layer +";
+            this.layerPlusButton.UseVisualStyleBackColor = true;
+            this.layerPlusButton.Click += new System.EventHandler(this.layerPlusButton_Click);
+            // 
+            // objectInfoLabel
+            // 
+            this.objectInfoLabel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.objectInfoLabel.Dock = System.Windows.Forms.DockStyle.Top;
+            this.objectInfoLabel.Location = new System.Drawing.Point(0, 46);
+            this.objectInfoLabel.Name = "objectInfoLabel";
+            this.objectInfoLabel.Size = new System.Drawing.Size(260, 90);
+            this.objectInfoLabel.TabIndex = 0;
             // 
             // cameraInfoLabel
             // 
@@ -263,51 +346,6 @@
             this.keyInputTimer.Interval = 300;
             this.keyInputTimer.Tick += new System.EventHandler(this.keyInputTimer_Tick);
             // 
-            // objectMovePanel
-            // 
-            this.objectMovePanel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.objectMovePanel.Controls.Add(this.moveToButton);
-            this.objectMovePanel.Controls.Add(this.layerMinusButton);
-            this.objectMovePanel.Controls.Add(this.layerPlusButton);
-            this.objectMovePanel.Dock = System.Windows.Forms.DockStyle.Top;
-            this.objectMovePanel.Location = new System.Drawing.Point(0, 136);
-            this.objectMovePanel.Name = "objectMovePanel";
-            this.objectMovePanel.Size = new System.Drawing.Size(260, 100);
-            this.objectMovePanel.TabIndex = 4;
-            // 
-            // layerMinusButton
-            // 
-            this.layerMinusButton.Location = new System.Drawing.Point(135, 3);
-            this.layerMinusButton.Name = "layerMinusButton";
-            this.layerMinusButton.Size = new System.Drawing.Size(119, 23);
-            this.layerMinusButton.TabIndex = 5;
-            this.layerMinusButton.TabStop = false;
-            this.layerMinusButton.Text = "Layer -";
-            this.layerMinusButton.UseVisualStyleBackColor = true;
-            this.layerMinusButton.Click += new System.EventHandler(this.layerMinusButton_Click);
-            // 
-            // layerPlusButton
-            // 
-            this.layerPlusButton.Location = new System.Drawing.Point(3, 3);
-            this.layerPlusButton.Name = "layerPlusButton";
-            this.layerPlusButton.Size = new System.Drawing.Size(126, 23);
-            this.layerPlusButton.TabIndex = 4;
-            this.layerPlusButton.TabStop = false;
-            this.layerPlusButton.Text = "Layer +";
-            this.layerPlusButton.UseVisualStyleBackColor = true;
-            this.layerPlusButton.Click += new System.EventHandler(this.layerPlusButton_Click);
-            // 
-            // moveToButton
-            // 
-            this.moveToButton.Location = new System.Drawing.Point(5, 32);
-            this.moveToButton.Name = "moveToButton";
-            this.moveToButton.Size = new System.Drawing.Size(124, 23);
-            this.moveToButton.TabIndex = 7;
-            this.moveToButton.TabStop = false;
-            this.moveToButton.Text = "Move To...";
-            this.moveToButton.UseVisualStyleBackColor = true;
-            this.moveToButton.Click += new System.EventHandler(this.moveToButton_Click);
-            // 
             // gamePoleView
             // 
             this.gamePoleView.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -338,8 +376,9 @@
             this.MainMenuStrip.ResumeLayout(false);
             this.MainMenuStrip.PerformLayout();
             this.toolPanel.ResumeLayout(false);
-            this.mevePanel.ResumeLayout(false);
+            this.tilePanel.ResumeLayout(false);
             this.objectMovePanel.ResumeLayout(false);
+            this.mevePanel.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.gamePoleView)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
@@ -369,13 +408,16 @@
         private System.Windows.Forms.Button moveUpButton;
         private System.Windows.Forms.Button moveLeftButton;
         private System.Windows.Forms.Button moveRightButton;
-        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.Label objectInfoLabel;
         private System.Windows.Forms.Timer keyInputTimer;
         private System.Windows.Forms.Label cameraInfoLabel;
         private System.Windows.Forms.Panel objectMovePanel;
         private System.Windows.Forms.Button moveToButton;
         private System.Windows.Forms.Button layerMinusButton;
         private System.Windows.Forms.Button layerPlusButton;
+        private System.Windows.Forms.Panel tilePanel;
+        private System.Windows.Forms.Button changeTypeButton;
+        private System.Windows.Forms.Label tileLabel;
     }
 }
 

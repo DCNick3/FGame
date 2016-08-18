@@ -5,6 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.IO;
 
 namespace FGame
 {
@@ -312,7 +314,7 @@ namespace FGame
             for (int i = 0; i < 128; i++)
             {
                 for (int j = 0; j < 128; j++)
-                    AddObject(new GamePoleObjectTile(new Vector2(i * 32f, j * 32f), i, i % 2 == 0, 0));
+                    AddObject(new GamePoleObjectTile(new Vector2(i * 32f, j * 32f), 0, false, 0));
             }
 
             for (int i = 0; i < 128; i++)
@@ -424,6 +426,24 @@ namespace FGame
                     obj.Moved = false;
                 }
             }
+        }
+
+        public void Save(Stream destination)
+        {
+            BinaryFormatter formatter = new BinaryFormatter();
+            formatter.Serialize(destination, objects);
+        }
+
+        public static Location Load(Game1 game, Stream source)
+        {
+            BinaryFormatter formatter = new BinaryFormatter();
+            Location result = new Location(game);
+            List<GamePoleObject> objects = (List<GamePoleObject>)formatter.Deserialize(source);
+            foreach (var obj in objects)
+            {
+                result.AddObject(obj);
+            }
+            return result;
         }
     }
 }

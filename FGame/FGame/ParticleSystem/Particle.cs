@@ -11,9 +11,8 @@ using Microsoft.Xna.Framework.Media;
 
 namespace FGame.ParticleSystem
 {
-    public class Particle
+    public struct Particle
     {
-
         public Texture2D Texture { get; set; }      
         public Vector2 Position { get; set; }       
         public Vector2 Velocity { get; set; }       
@@ -29,6 +28,7 @@ namespace FGame.ParticleSystem
         public float LightStrengthVelocity { get; set; }
         public float LightMax { get; set; }
         public float LightMaxVelocity { get; set; }
+        internal bool isUsed;
 
         public Particle(Texture2D texture, Vector2 position, Vector2 velocity,
             float angle, float angularVelocity, Vector4 color, float size, int ttl, float sizeVel, float alphaVel, bool isLight, float lightStrength, float lightStrengthVelocity, float lightMax, float lightMaxVel)
@@ -48,6 +48,7 @@ namespace FGame.ParticleSystem
             LightStrengthVelocity = lightStrengthVelocity;
             LightMax = lightMax;
             LightMaxVelocity = lightMaxVel;
+            isUsed = false;
         }
 
         public void Update() // цикл обновления
@@ -72,7 +73,6 @@ namespace FGame.ParticleSystem
 
         public void Draw(SpriteBatch spriteBatch, Vector2 globalToScreen)
         {
-
             Rectangle sourceRectangle = new Rectangle(0, 0, Texture.Width, Texture.Height);
             Vector2 origin = new Vector2(Texture.Width / 2, Texture.Height / 2); 
 

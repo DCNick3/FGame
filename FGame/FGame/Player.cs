@@ -183,6 +183,7 @@ namespace FGame
 
         public bool AddItem(ItemStack item)
         {
+            /*
             int s = 0;
             xx:
             while (s < 40 && Inventory[s] != null && Inventory[s].Type != item.Type) { s++; }
@@ -207,6 +208,49 @@ namespace FGame
             }
             else
                 Inventory[s] = item;
+            return true;
+            */
+
+            retry:
+            int slot = -1;
+            //Pass 1
+            for (int i = 0; i < Inventory.Length; i++)
+            {
+                if (Inventory[i] != null && Inventory[i].Type == item.Type)
+                {
+                    slot = i;
+                    break;
+                }
+            }
+            //Pass 2
+            if (slot == -1)
+            {
+                for (int i = 0; i < Inventory.Length; i++)
+                {
+                    if (Inventory[i] == null)
+                    {
+                        slot = i;
+                        break;
+                    }
+                }
+            }
+            if (slot == -1)
+                return false;
+            if (Inventory[slot] == null)
+            {
+                Inventory[slot] = new ItemStack(item.Type, 0);
+            }
+
+            int max = item.Type.GetMaxStackSize();
+            int dest = (Inventory[slot].Count + item.Count);
+            int rem = dest - max;
+            int cut = dest;
+            if (dest > max) dest = max;
+            Inventory[slot].Count = dest;
+            if (rem < 0) rem = 0;
+            item.Count = rem;
+            if (rem > 0) goto retry;
+            
             return true;
         }
 

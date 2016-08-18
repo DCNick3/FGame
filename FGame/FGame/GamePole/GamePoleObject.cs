@@ -47,6 +47,11 @@ namespace FGame
          * 6 to 10  - tile effects
          * 11 to 15 - chests, tables etc
          * */
+
+        public override string ToString()
+        {
+            return GetType() + ", " + UUID + ", " + Position;
+        }
     }
 
     public class GamePoleObjectTile : GamePoleObject
@@ -110,6 +115,11 @@ namespace FGame
 
         public override void Update(GameRegistry registry, GameTime gameTime)
         {
+        }
+
+        public override string ToString()
+        {
+            return base.ToString() + " Type: " + Type;
         }
     }
 

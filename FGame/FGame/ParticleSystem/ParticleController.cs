@@ -14,17 +14,20 @@ namespace FGame.ParticleSystem
 {
     public class ParticleController
     {
-
-        public List<Particle> particles;
+        private Particle[] _pool;
+        private const int _poolAllocSize = 16;
+        //public List<Particle> particles;
 
         private Texture2D sparkTexture; 
         //private Texture2D smoke; 
 
         private Random random;
 
+        public int ActiveParticles { get; internal set; }
+
         public ParticleController()
         {
-            this.particles = new List<Particle>();
+            _pool = new Particle[_poolAllocSize];
             random = new Random();
         }
 
@@ -32,7 +35,6 @@ namespace FGame.ParticleSystem
         {
             sparkTexture = Manager.Load<Texture2D>("spark");
             //smoke = Manager.Load<Texture2D>("smoke");
-
         }
 
         public void FireballFlySparks(Vector2 position)
@@ -127,36 +129,77 @@ namespace FGame.ParticleSystem
             }
         }
 
-        private Particle GenerateNewParticle(Texture2D texture, Vector2 position, Vector2 velocity,
+        private void GenerateNewParticle(Texture2D texture, Vector2 position, Vector2 velocity,
             float angle, float angularVelocity, Vector4 color, float size, int ttl, float sizeVel, float alphaVel, bool isLight, float lightStrength, float lightStrengthVelocity, float lightMax, float lightMaxVel) // генерация новой частички
         {
             Particle particle = new Particle(texture, position, velocity, angle, angularVelocity, color, size, ttl, sizeVel, alphaVel, isLight, lightStrength, lightStrengthVelocity, lightMax, lightMaxVel);
-            particles.Add(particle);
-            return particle;
+            PushParticle(particle);
+        }
+
+        private void PushParticle(Particle particle)
+        {
+            particle.isUsed = true;
+            Particle _particle;
+            int n = 0;
+            retry:
+            do
+            {
+                _particle = _pool[n];
+                if (!_particle.isUsed)
+                    break;
+                n++;
+            } while (n < _pool.Length);
+            if (_particle.isUsed)
+            {
+                PoolAlloc();
+                goto retry;
+            }
+            _pool[n] = particle;
+        }
+
+        private void PoolAlloc()
+        {
+            Particle[] newArray = new Particle[_pool.Length + _poolAllocSize];
+            Array.Copy(_pool, newArray, _pool.Length);
+            _pool = newArray;
         }
 
         public void Update(GameTime gameTime)
         {
-
-            for (int particle = 0; particle < particles.Count; particle++)
+            int activeParticles = 0;
+            for (int i = 0; i < _pool.Length; i++)
             {
-                particles[particle].Update();
-                if (particles[particle].Size <= 0 || particles[particle].TTL <= 0) // если время жизни частички или её размеры равны нулю, удаляем её
+                Particle particle = _pool[i];
+                if (particle.isUsed)
                 {
-                    particles.RemoveAt(particle);
-                    particle--;
+                    activeParticles++;
+                    particle.Update();
+                    if (particle.Size <= 0 || particle.TTL <= 0)
+                    {
+                        particle.isUsed = false;
+                    }
                 }
-            }
 
+                _pool[i] = particle;
+            }
+            ActiveParticles = activeParticles;
         }
 
-        public void Draw(SpriteBatch spriteBatch, Vector2 globalToScreen)
+        public void Draw(SpriteBatch spriteBatch, Vector2 globalToScreen, Vector2 screenSize)
         {
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Additive); // ставим режим смешивания Addictive
 
-            for (int index = 0; index < particles.Count; index++) // рисуем все частицы
+            for (int i = 0; i < _pool.Length; i++) // рисуем все частицы
             {
-                particles[index].Draw(spriteBatch, globalToScreen);
+                Particle particle = _pool[i];
+                if (particle.isUsed)
+                {
+                    FloatRectangle screenRect = new FloatRectangle(globalToScreen, screenSize);
+                    if (screenRect.Contains(particle.Position))
+                        particle.Draw(spriteBatch, globalToScreen);
+
+                }
+                _pool[i] = particle;
             }
 
             spriteBatch.End();
@@ -173,10 +216,10 @@ namespace FGame.ParticleSystem
         public LightSource[] GetLightSources()
         {
             List<LightSource> result = new List<LightSource>();
-            for (int i = 0; i < particles.Count; i++)
+            for (int i = 0; i < _pool.Length; i++)
             {
-                var particle = particles[i];
-                if (particle.IsLighting)
+                var particle = _pool[i];
+                if (particle.isUsed && particle.IsLighting)
                 {
                     result.Add(new LightSource() {Max = particle.LightMax, Position = new Point((int)particle.Position.X, (int)particle.Position.Y), Strenght = (int)particle.LightStrength });
                 }

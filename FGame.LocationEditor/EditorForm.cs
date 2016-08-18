@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using FGame;
 using System.Threading;
+using System.Drawing.Imaging;
 
 namespace FGame.LocationEditor
 {
@@ -22,7 +23,9 @@ namespace FGame.LocationEditor
         private Mutex renderMutex = new Mutex();
         private ManualResetEvent closeEvnt = new ManualResetEvent(true);
         private Image tilesList = Properties.Resources.tiles;
+        private Image chestList = Properties.Resources.chest;
         private Image[] tiles;
+        private Image[,] chest;
 
         private bool isViewPointMoving = false;
         private Keys viewPointMoveKey;
@@ -39,6 +42,7 @@ namespace FGame.LocationEditor
             InitializeComponent();
             location = new Location(null);
             tiles = new Image[128];
+            chest = new Image[4,4];
             for (int i = 0; i < 128; i++)
             {
                 tiles[i] = new Bitmap(32, 32);
@@ -47,6 +51,18 @@ namespace FGame.LocationEditor
                 Rectangle src = GetSourceRectTile(i);
                 g.DrawImage(tilesList, new Point[] { new Point(0, 0), new Point(tiles[i].Width, 0), new Point(0, tiles[i].Height) }, src, GraphicsUnit.Pixel);
                 g.Dispose();
+            }
+            for (int x = 0; x < 4; x++)
+            {
+                for (int y = 0; y < 4; y++)
+                {
+                    chest[x, y] = new Bitmap(32, 48);
+                    Graphics g = Graphics.FromImage(chest[x, y]);
+
+                    Rectangle src = new Rectangle(x * 32, y * 48, 32, 48);
+                    g.DrawImage(chestList, new Point[] { new Point(0, 0), new Point(chest[x, y].Width, 0), new Point(0, chest[x, y].Height) }, src, GraphicsUnit.Pixel);
+                    g.Dispose();
+                }
             }
         }
 
@@ -88,6 +104,23 @@ namespace FGame.LocationEditor
                 Point pos = (obj.Position - viewPoint.ToVector2()).ToDrawingPoint();
                 Size s = new Size(obj.Size.ToDrawingPoint());
                 Image texture = GetObjectTexture(obj);
+                if (selected == obj)
+                {
+                    Bitmap bm = new Bitmap(texture.Width, texture.Height);
+                    ImageAttributes ia = new ImageAttributes();
+                    ColorMatrix cm = new System.Drawing.Imaging.ColorMatrix(new float[][]
+                    {
+                        new float[] {1, 0, 0, 0, 0},
+                        new float[] {0, 1, 0, 0, 0},
+                        new float[] {0, 0, 1, 0, 0},
+                        new float[] {0, 0, 0, 1, 0},
+                        new float[] {.00f, .00f, 1.00f, .0f, 1}
+                    });
+                    ia.SetColorMatrix(cm);
+                    Graphics gr = Graphics.FromImage(bm);
+                    gr.DrawImage(texture, new Rectangle(0, 0, texture.Width, texture.Height), 0, 0, texture.Width, texture.Height, GraphicsUnit.Pixel, ia);
+                    texture = bm;
+                }
                 g.DrawImage(texture, new Rectangle(pos, s));
             }
             renderMutex.ReleaseMutex();
@@ -112,6 +145,11 @@ namespace FGame.LocationEditor
             {
                 var t = (GamePoleObjectTile)obj;
                 return tiles[t.Type];
+            }
+            if (obj is GamePoleObjectChest)
+            {
+                var t = (GamePoleObjectChest)obj;
+                return chest[t.Type, t.AnimationFrame];
             }
             return new Bitmap((int)obj.Size.X, (int)obj.Size.Y);
         }
@@ -143,11 +181,19 @@ namespace FGame.LocationEditor
         private void gamePoleView_MouseClick(object sender, MouseEventArgs e)
         {
             Point glob = (viewPoint.ToVector2() + e.Location.ToVector2()).ToDrawingPoint();
-            GamePoleObject[] objs = location.GetObjectsIntersectsPoint(glob.ToVector2());
+            GamePoleObject[] objs = location.GetObjectsIntersectsPoint(glob.ToVector2()).OrderByDescending((GamePoleObject o) => o.Layer).ToArray();
             if (objs.Length < 2)
                 Select(objs.ElementAtOrDefault(0));
             else
-                throw new NotImplementedException();
+            {
+                SelectorForm sf = new SelectorForm();
+                sf.Text = "Select one objet";
+                sf.values = objs.Select((GamePoleObject o) => o.ToString()).ToArray();
+                if (sf.ShowDialog() == DialogResult.OK)
+                {
+                    Select(objs[sf.selected]);
+                }
+            }
         }
 
         private void Select(GamePoleObject obj)
@@ -155,9 +201,28 @@ namespace FGame.LocationEditor
             location.UpdateCache();
             selected = obj;
             if (selected != null)
-                label1.Text = obj.GetType().ToString() + "\n" + obj.Position.ToString() + "\n" + obj.UUID + "\nLayer: " + obj.Layer;
+            {
+                objectInfoLabel.Text = obj.GetType().ToString() + "\n" + obj.Position.ToString() + "\n" + obj.UUID + "\nLayer: " + obj.Layer;
+                objectMovePanel.Show();
+                if (selected is GamePoleObjectTile)
+                {
+                    var o = (GamePoleObjectTile)obj;
+                    tilePanel.Show();
+                    tileLabel.Text = "Type: " + o.Type;
+                }
+                else
+                {
+                    tilePanel.Hide();
+                    tileLabel.Text = "";
+                }
+            }
             else
-                label1.Text = "";
+            {
+                objectInfoLabel.Text = "";
+                objectMovePanel.Hide();
+                tilePanel.Hide();
+                tileLabel.Text = "";
+            }
             Application.DoEvents();
             Invalidate();
         }
@@ -171,16 +236,22 @@ namespace FGame.LocationEditor
                     isViewPointMoving = true;
                     viewPointMoveKey = e.KeyCode;
                     viewPointMovingSpeed = (e.Control) ? 64 : 32;
-                    keyInputTimer_Tick(null, null);
+                    if (!keyInputTimer.Enabled)
+                        keyInputTimer_Tick(null, null);
+                    keyInputTimer.Enabled = true;
                 }
                 else if (selected != null)
                 {
-                    keyInputTimer.Interval = 300;
+                    keyInputTimer.Interval = 150;
                     isSelectedObjectMoving = true;
                     selectedObjectMoveKey = e.KeyCode;
                     selectedObjectMovingSpeed = (e.Control) ? 64 : 32;
-                    keyInputTimer_Tick(null, null);
+                    if (!keyInputTimer.Enabled)
+                        keyInputTimer_Tick(null, null);
+                    keyInputTimer.Enabled = true;
                 }
+            if (e.KeyCode == Keys.Delete)
+                deleteToolStripMenuItem_Click(null, null);
         }
 
         private void EditorForm_KeyUp(object sender, KeyEventArgs e)
@@ -190,6 +261,7 @@ namespace FGame.LocationEditor
                 if (e.KeyCode == viewPointMoveKey)
                 {
                     isViewPointMoving = false;
+                    keyInputTimer.Enabled = false;
                 }
             }
             if (isSelectedObjectMoving)
@@ -197,6 +269,7 @@ namespace FGame.LocationEditor
                 if (e.KeyCode == selectedObjectMoveKey)
                 {
                     isSelectedObjectMoving = false;
+                    keyInputTimer.Enabled = false;
                 }
             }
         }
@@ -284,6 +357,39 @@ namespace FGame.LocationEditor
                 selected.__hackSetLayer(selected.Layer - 1);
                 Select(selected);
                 ReDraw();
+            }
+        }
+
+        private void changeTypeButton_Click(object sender, EventArgs e)
+        {
+            if (selected != null && selected is GamePoleObjectTile)
+            {
+                var o = (selected as GamePoleObjectTile);
+                IntegerDialogForm id = new IntegerDialogForm();
+                id.Text = "Change Type";
+                id.value = o.Type;
+                if (id.ShowDialog() == DialogResult.OK)
+                {
+                    o.Type = id.value;
+                    Select(selected);
+                    ReDraw();
+                }
+            }
+        }
+
+        private void tileToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            var o = new GamePoleObjectTile(Microsoft.Xna.Framework.Vector2.Zero, 0, false, 0);
+            location.AddObject(o);
+            Select(o);
+        }
+
+        private void deleteToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (selected != null)
+            {
+                location.RemoveObject(selected);
+                Select(null);
             }
         }
     }

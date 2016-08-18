@@ -91,14 +91,17 @@ namespace FGame
          * Add abstraction: Tiles & Chests are GamePoleObject's (done)
          * Add light flikering (done)
          * Improve TextureRegistry
-         * Add loading locations from file
-         * Create location editor
+         * Add loading locations from file (done)
+         * Create location editor (in progress)
          * Fix the bug with wrongly drawed tiles (done)
          * Imrove moving algorythm (that won't have bug with speedhack) (done)
          * Add collides
          * Add moving objects
          * Add mobs
          * Add knockback
+         * Fix Player.AddItem (dome)
+         * Refactor Player. It's GameObject with controls stack
+         * Add Pool to particle controller (done)
          */
 
         Vector2 ScreenCenter {
@@ -191,6 +194,7 @@ namespace FGame
         {
             this.gameTime = gameTime;
             
+            //FPS
             if (gameTime.TotalGameTime - lastFpsCounterReset > fpsCounterResetFreq)
             {
                 fps = fpsCounter;
@@ -198,6 +202,7 @@ namespace FGame
                 lastFpsCounterReset = gameTime.TotalGameTime;
             }
 
+            //Player Run
             if (gameTime.TotalGameTime - lastRunUpdate > runFreq)
             {
                 if (isMoving)
@@ -231,7 +236,7 @@ namespace FGame
             UpdateFireballs(gameTime);
             lightSources = GetLightSources();
 
-
+            #region keyboard_input
             lastKeyboardState = keyboardState;
             keyboardState = Keyboard.GetState();
             if (firstRun)
@@ -505,7 +510,7 @@ namespace FGame
                     player.ValidateInventory();
                 }
             }
-
+            #endregion
 
 
             particleController.Update(gameTime);
@@ -693,7 +698,7 @@ namespace FGame
 
 
             spriteBatch.End();
-            particleController.Draw(spriteBatch, player.Position - ScreenCenter - new Vector2(32, 32) / 2);
+            particleController.Draw(spriteBatch, player.Position - ScreenCenter - new Vector2(32, 32) / 2, new Vector2(screenWidth, screenHeight));
 
             //GraphicsDevice.SetRenderTarget(null);
             if (enableSmoothLightning)
@@ -729,7 +734,8 @@ namespace FGame
                 string dbgnfo = " Pos: \n    " + player.Position.X + "\n    " + player.Position.Y
                     + "\n IsRunningSlowly: " + gameTime.IsRunningSlowly
                     + "\n FPS: " + fps
-                    + "\n Fireballs: " + fireballs.Count;
+                    + "\n Fireballs: " + fireballs.Count
+                    + "\n Particles: " + particleController.ActiveParticles;
                 Vector2 sz = font14.MeasureString(dbgnfo);
                 spriteBatch.DrawString(font14, dbgnfo, new Vector2(0, screenHeight - sz.Y), Color.White);
             }

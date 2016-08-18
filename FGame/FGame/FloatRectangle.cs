@@ -8,6 +8,9 @@ namespace FGame
 {
     public class FloatRectangle
     {
+        private Vector2 position;
+        private float size;
+
         public FloatRectangle() : this(0,0,0,0)
         { }
 
@@ -18,6 +21,9 @@ namespace FGame
             Width = width;
             Height = height;
         }
+
+        public FloatRectangle(Vector2 position, Vector2 size) : this(position.X, position.Y, size.X, size.Y)
+        {}
 
         public float X { get; set; }
         public float Y { get; set; }
